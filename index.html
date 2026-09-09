@@ -1,0 +1,1383 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>坂道×イコノイジョイ クイズ＆DB</title>
+
+<!-- ホーム画面に追加してアプリのように使うための設定 -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#26314f">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="坂道クイズ">
+<style>
+  :root{
+    --navy:#26314f;
+    --navy-soft:#3d4a6b;
+    --pink:#f4b6c2;
+    --pink-deep:#e2809a;
+    --bg:#faf7f8;
+    --card:#ffffff;
+    --line:#e8e2e5;
+    --line-soft:#f1ecee;
+    --muted:#8b8590;
+    --ok:#2e9e6b;
+    --ok-bg:#e8f6ef;
+    --ng:#d9534f;
+    --ng-bg:#fdecec;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--navy);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Meiryo",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:680px; margin:0 auto;
+    padding:0 16px calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  .hidden{display:none !important;}
+
+  /* ---------- ヘッダー / ナビ ---------- */
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%,#3a2d44 60%,var(--pink-deep) 140%);
+    color:#fff;
+    /* ホーム画面から起動したとき、iPhoneの時計表示と重ならないように余白を足す */
+    padding:calc(22px + env(safe-area-inset-top, 0px)) 16px 0;
+    position:sticky; top:0; z-index:30;
+  }
+  header .inner{max-width:680px; margin:0 auto;}
+  header h1{margin:0; font-size:18px; letter-spacing:.04em;}
+  header p{margin:5px 0 0; font-size:12px; opacity:.78;}
+  nav{display:flex; gap:4px; margin-top:14px;}
+  nav button{
+    flex:1; background:none; border:none; color:#fff; opacity:.62;
+    font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    padding:10px 4px 11px; border-bottom:2.5px solid transparent; transition:.15s;
+    position:relative;
+  }
+  nav button:hover{opacity:.85;}
+  nav button[aria-current="true"]{opacity:1; border-bottom-color:var(--pink);}
+  nav .dot{
+    display:inline-block; min-width:16px; padding:0 4px; margin-left:4px;
+    background:var(--pink-deep); color:#fff; border-radius:99px;
+    font-size:10px; line-height:16px; vertical-align:1px;
+  }
+
+  main{padding-top:20px;}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; margin-bottom:16px;
+  }
+  .card h2{
+    margin:0 0 12px; font-size:13px; letter-spacing:.08em; color:var(--muted); font-weight:700;
+  }
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    border:1.5px solid var(--line); background:#fff; color:var(--navy);
+    border-radius:999px; padding:7px 14px; font-size:13.5px; cursor:pointer;
+    font-family:inherit; transition:.15s; font-weight:600;
+  }
+  .chip:hover{border-color:var(--pink-deep);}
+  .chip[aria-pressed="true"]{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .chip[data-color][aria-pressed="true"]{background:var(--c); border-color:var(--c); color:var(--cf);}
+  .chip.sm{padding:5px 11px; font-size:12.5px;}
+  .row-actions{display:flex; gap:8px; margin-top:10px;}
+  .mini{
+    background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer;
+    text-decoration:underline; padding:2px 0; font-family:inherit;
+  }
+
+  .btn{
+    width:100%; border:none; border-radius:12px; padding:15px;
+    background:var(--navy); color:#fff; font-size:16px; font-weight:700;
+    cursor:pointer; font-family:inherit; letter-spacing:.05em; transition:.15s;
+  }
+  .btn:hover{background:var(--navy-soft);}
+  .btn:disabled{opacity:.4; cursor:not-allowed;}
+  .btn.sub{background:#fff; color:var(--navy); border:1.5px solid var(--line);}
+  .btn.sub:hover{border-color:var(--navy);}
+  .btn.sm{padding:11px; font-size:14px;}
+
+  /* ---------- クイズ ---------- */
+  .qhead{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .qcount{font-size:13px; color:var(--muted); font-weight:700;}
+  .qscore{font-size:13px; color:var(--muted);}
+  .bar{height:5px; background:var(--line); border-radius:99px; overflow:hidden; margin-bottom:18px;}
+  .bar > i{display:block; height:100%; background:var(--pink-deep); transition:width .3s;}
+  .badges{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;}
+  .badge{
+    font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px;
+    background:var(--navy); color:#fff; letter-spacing:.04em;
+  }
+  .badge.tag{background:#f0ecee; color:var(--muted);}
+  .qtext{font-size:18px; line-height:1.6; font-weight:700; margin:0 0 18px;}
+  .qtext .em{background:linear-gradient(transparent 62%, var(--pink) 62%); padding:0 1px;}
+  .choices{display:flex; flex-direction:column; gap:9px;}
+  .choice{
+    text-align:left; border:1.5px solid var(--line); background:#fff; color:var(--navy);
+    border-radius:12px; padding:14px 15px; font-size:15px; cursor:pointer;
+    font-family:inherit; font-weight:600; line-height:1.45; transition:.12s;
+    display:flex; gap:11px; align-items:flex-start;
+  }
+  .choice:hover:not(:disabled){border-color:var(--pink-deep); background:#fffafb;}
+  .choice:disabled{cursor:default;}
+  .choice .no{
+    flex:none; width:22px; height:22px; border-radius:50%; background:#f0ecee;
+    color:var(--muted); font-size:12px; display:flex; align-items:center;
+    justify-content:center; font-weight:700; margin-top:1px;
+  }
+  .choice.correct{border-color:var(--ok); background:var(--ok-bg);}
+  .choice.correct .no{background:var(--ok); color:#fff;}
+  .choice.wrong{border-color:var(--ng); background:var(--ng-bg);}
+  .choice.wrong .no{background:var(--ng); color:#fff;}
+  .choice.dim{opacity:.5;}
+  .feedback{margin-top:16px;}
+  .verdict{font-size:15px; font-weight:800; margin-bottom:8px;}
+  .verdict.ok{color:var(--ok);} .verdict.ng{color:var(--ng);}
+  .explain{font-size:13px; line-height:1.7; color:var(--navy-soft); background:#f7f5f6; border-radius:10px; padding:12px 14px;}
+  .explain b{color:var(--navy);}
+  .report-link{
+    display:block; margin:11px auto 0; background:none; border:none;
+    color:var(--muted); font-size:12px; cursor:pointer; font-family:inherit;
+    text-decoration:underline;
+  }
+  .report-link:hover{color:var(--ng);}
+  .report-link.done{color:var(--ok); text-decoration:none;}
+
+  .score-big{text-align:center; padding:6px 0 4px;}
+  .score-big .n{font-size:44px; font-weight:800; line-height:1.1;}
+  .score-big .n small{font-size:20px; color:var(--muted); font-weight:700;}
+  .score-big .msg{font-size:14px; color:var(--muted); margin-top:6px;}
+  .review{list-style:none; margin:14px 0 0; padding:0;}
+  .review li{display:flex; gap:10px; padding:11px 0; border-top:1px solid var(--line); font-size:13px; line-height:1.55;}
+  .review .mk{flex:none; font-weight:800;}
+  .review .mk.ok{color:var(--ok);} .review .mk.ng{color:var(--ng);}
+  .review .ans{color:var(--muted); font-size:12px; margin-top:2px;}
+
+  /* ---------- DB ブラウザ ---------- */
+  .toolbar{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; margin-bottom:14px;
+  }
+  .search{
+    width:100%; border:1.5px solid var(--line); border-radius:11px; padding:12px 13px;
+    font-size:15px; font-family:inherit; color:var(--navy); background:#fff;
+  }
+  .search:focus{outline:none; border-color:var(--pink-deep);}
+  .toolbar .sec{margin-top:12px;}
+  .toolbar .sec > span{
+    display:block; font-size:11px; color:var(--muted); font-weight:700;
+    letter-spacing:.06em; margin-bottom:7px;
+  }
+  .count{font-size:12px; color:var(--muted); margin:0 2px 10px; font-weight:600;}
+
+  .rows{display:flex; flex-direction:column; gap:8px;}
+  .row{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; transition:.15s;
+  }
+  .row:hover{border-color:var(--pink);}
+  .row > button{
+    width:100%; display:flex; gap:11px; align-items:flex-start; text-align:left;
+    background:none; border:none; font-family:inherit; cursor:pointer;
+    padding:13px 14px 13px 0; color:inherit;
+  }
+  .row .gbar{flex:none; width:5px; align-self:stretch; border-radius:0 3px 3px 0;}
+  .row .body{flex:1; min-width:0;}
+  .row .t1{
+    font-size:14.5px; font-weight:700; line-height:1.45;
+    display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;
+  }
+  .row .t2{font-size:12px; color:var(--muted); margin-top:3px; line-height:1.55;}
+  .row .t3{font-size:12.5px; margin-top:5px; color:var(--navy-soft);}
+  .row .chev{flex:none; color:var(--line); font-size:12px; align-self:center; padding-right:2px;}
+  .row.open .chev{transform:rotate(90deg); color:var(--pink-deep);}
+  .row .chev{transition:.2s;}
+
+  .ttag{
+    font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px;
+    background:#f0ecee; color:var(--muted); letter-spacing:.03em; white-space:nowrap;
+  }
+  .ttag.hyoudai{background:#fbe4ea; color:#b4426b;}
+  .ttag.unit{background:#e6eefb; color:#3f6bb0;}
+  .ttag.solo{background:#fdf0dd; color:#a9702a;}
+  .ttag.gen{background:#e9f5ec; color:#3f8757;}
+  .ttag.grad{background:#f2f0f4; color:#7d7488;}
+
+  .detail{
+    padding:2px 14px 14px 19px; border-top:1px dashed var(--line-soft);
+    margin-top:0; font-size:13px;
+  }
+  .detail dl{display:grid; grid-template-columns:78px 1fr; gap:7px 12px; margin:12px 0 0;}
+  .detail dt{color:var(--muted); font-size:11.5px; font-weight:700; padding-top:1px;}
+  .detail dd{margin:0; line-height:1.6; word-break:break-word;}
+  .detail .src{font-size:11px; color:var(--muted); line-height:1.55;}
+  .warn{color:#b4426b;}
+
+  .swatches{display:inline-flex; gap:4px; vertical-align:-2px; margin-right:6px;}
+  .sw{
+    width:13px; height:13px; border-radius:50%; display:inline-block;
+    border:1px solid rgba(0,0,0,.12); box-shadow:inset 0 -1px 2px rgba(0,0,0,.06);
+  }
+  .more{margin-top:12px;}
+
+  .empty{text-align:center; color:var(--muted); font-size:13px; padding:32px 0;}
+
+  /* ---------- モーダル ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(30,24,34,.5); z-index:60;
+    display:flex; align-items:flex-end; justify-content:center; padding:16px;
+  }
+  @media(min-width:600px){ .overlay{align-items:center;} }
+  .modal{
+    background:#fff; border-radius:18px; padding:20px; width:100%; max-width:520px;
+    max-height:86vh; overflow:auto;
+  }
+  .modal h3{margin:0 0 4px; font-size:16px;}
+  .modal .sub{font-size:12px; color:var(--muted); margin:0 0 14px; line-height:1.6;}
+  .modal .qbox{
+    background:#f7f5f6; border-radius:10px; padding:11px 13px; font-size:12.5px;
+    line-height:1.6; margin-bottom:14px; color:var(--navy-soft);
+  }
+  .modal label{display:block; font-size:11.5px; color:var(--muted); font-weight:700; margin:0 0 7px;}
+  .modal textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px;
+    font-size:14px; font-family:inherit; min-height:84px; resize:vertical; color:var(--navy);
+  }
+  .modal textarea:focus{outline:none; border-color:var(--pink-deep);}
+  .modal .acts{display:flex; gap:8px; margin-top:16px;}
+
+  .rep{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:13px 14px; margin-bottom:8px; font-size:13px; line-height:1.6;
+  }
+  .rep .meta{font-size:11px; color:var(--muted); margin-bottom:5px;}
+  .rep .kind{
+    display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px;
+    border-radius:999px; background:#fbe4ea; color:#b4426b; margin-right:6px;
+  }
+  .rep .cmt{margin-top:6px; color:var(--navy-soft);}
+  .rep .q{font-weight:700;}
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+    background:var(--navy); color:#fff; padding:11px 20px; border-radius:99px;
+    font-size:13px; font-weight:700; z-index:80; box-shadow:0 6px 20px rgba(0,0,0,.2);
+  }
+  footer{text-align:center; font-size:11.5px; color:var(--muted); padding:14px 0 0; line-height:1.7;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>坂道 × イコノイジョイ</h1>
+    <p>楽曲843件・メンバー288名のデータベース</p>
+    <nav>
+      <button data-view="quiz"    aria-current="true">クイズ</button>
+      <button data-view="songs">楽曲DB</button>
+      <button data-view="members">メンバーDB</button>
+      <button data-view="reports">報告<span class="dot hidden" id="repDot">0</span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ================= クイズ ================= -->
+  <div id="view-quiz">
+    <section id="setup">
+      <div class="card">
+        <h2>グループ</h2>
+        <div class="chips" id="groupChips"></div>
+        <div class="row-actions">
+          <button class="mini" data-all="1">すべて選択</button>
+          <button class="mini" data-all="0">すべて解除</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>ジャンル</h2>
+        <div class="chips" id="catChips"></div>
+      </div>
+      <div class="card">
+        <h2>問題数</h2>
+        <div class="chips" id="countChips"></div>
+      </div>
+      <button class="btn" id="startBtn">クイズをはじめる</button>
+      <p id="setupNote" style="font-size:12px;color:var(--muted);text-align:center;margin:10px 0 0;"></p>
+    </section>
+
+    <section id="quiz" class="hidden">
+      <div class="card">
+        <div class="qhead">
+          <span class="qcount" id="qCount"></span>
+          <span class="qscore" id="qScore"></span>
+        </div>
+        <div class="bar"><i id="qBar" style="width:0%"></i></div>
+        <div class="badges" id="qBadges"></div>
+        <p class="qtext" id="qText"></p>
+        <div class="choices" id="qChoices"></div>
+        <div class="feedback hidden" id="qFeedback">
+          <div class="verdict" id="qVerdict"></div>
+          <div class="explain" id="qExplain"></div>
+          <button class="report-link" id="qReport">この問題がおかしい？ 報告する</button>
+        </div>
+      </div>
+      <button class="btn hidden" id="nextBtn">次の問題へ</button>
+      <button class="btn sub" id="quitBtn" style="margin-top:8px;">やめて設定に戻る</button>
+    </section>
+
+    <section id="result" class="hidden">
+      <div class="card">
+        <div class="score-big">
+          <div class="n"><span id="rScore"></span><small id="rTotal"></small></div>
+          <div class="msg" id="rMsg"></div>
+        </div>
+        <ul class="review" id="rReview"></ul>
+      </div>
+      <button class="btn" id="againBtn">同じ設定でもう一度</button>
+      <button class="btn sub" id="backBtn" style="margin-top:8px;">設定を変える</button>
+    </section>
+  </div>
+
+  <!-- ================= 楽曲DB ================= -->
+  <div id="view-songs" class="hidden">
+    <div class="toolbar">
+      <input class="search" id="songSearch" type="search"
+             placeholder="曲名・CD名・作曲者・センターなどで検索">
+      <div class="sec">
+        <span>グループ</span>
+        <div class="chips" id="songGroups"></div>
+      </div>
+      <div class="sec">
+        <span>種類</span>
+        <div class="chips" id="songTypes"></div>
+      </div>
+      <div class="sec">
+        <span>並び順</span>
+        <div class="chips" id="songSort"></div>
+      </div>
+    </div>
+    <p class="count" id="songCount"></p>
+    <div class="rows" id="songRows"></div>
+    <button class="btn sub sm more hidden" id="songMore">さらに表示</button>
+  </div>
+
+  <!-- ================= メンバーDB ================= -->
+  <div id="view-members" class="hidden">
+    <div class="toolbar">
+      <input class="search" id="memSearch" type="search"
+             placeholder="名前・期・サイリウムカラーなどで検索">
+      <div class="sec">
+        <span>グループ</span>
+        <div class="chips" id="memGroups"></div>
+      </div>
+      <div class="sec">
+        <span>在籍</span>
+        <div class="chips" id="memStatus"></div>
+      </div>
+      <div class="sec">
+        <span>並び順</span>
+        <div class="chips" id="memSort"></div>
+      </div>
+    </div>
+    <p class="count" id="memCount"></p>
+    <div class="rows" id="memRows"></div>
+    <button class="btn sub sm more hidden" id="memMore">さらに表示</button>
+  </div>
+
+  <!-- ================= 報告一覧 ================= -->
+  <div id="view-reports" class="hidden">
+    <div class="card">
+      <h2>問題の報告</h2>
+      <p style="font-size:13px;line-height:1.7;margin:0;color:var(--navy-soft);">
+        クイズの答えや選択肢がおかしいと思ったら、その問題の下にある
+        「この問題がおかしい？ 報告する」から報告できます。
+        報告はこの一覧にたまり、<b>まとめてコピー</b>して修正依頼に使えます。
+      </p>
+    </div>
+    <p class="count" id="repCount"></p>
+    <div id="repRows"></div>
+    <button class="btn sub sm" id="repCopy">報告をまとめてコピー</button>
+    <button class="btn sub sm" id="repClear" style="margin-top:8px;">報告をすべて削除</button>
+  </div>
+
+  <footer id="dataNote"></footer>
+</main>
+
+<script src="quiz_data.js"></script>
+<script>
+(function(){
+"use strict";
+
+const D = window.QUIZ_DATA;
+
+const GROUP_COLORS = {
+  "乃木坂46":  {c:"#7030A0", f:"#fff"},
+  "欅坂46":    {c:"#548235", f:"#fff"},
+  "櫻坂46":    {c:"#F4B6C2", f:"#000"},
+  "けやき坂46":{c:"#A9D18E", f:"#000"},
+  "日向坂46":  {c:"#9DC3E6", f:"#000"},
+  "=LOVE":     {c:"#F0537D", f:"#fff"},
+  "≠ME":       {c:"#7FD9B0", f:"#000"},
+  "≒JOY":      {c:"#FFD966", f:"#000"},
+};
+
+/* ---------------- 汎用ヘルパ ---------------- */
+const $ = id => document.getElementById(id);
+const rnd  = a => a[Math.floor(Math.random()*a.length)];
+const shuf = a => { const b=a.slice(); for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
+const uniq = a => [...new Set(a)];
+const esc  = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// タグを外し、実体参照(&quot; など)も元に戻す。
+// 『野中"まさ"雄一』のように名前に引用符を含む人がいるため、単純なタグ除去では足りない。
+function plain(s){
+  const d = document.createElement("div");
+  d.innerHTML = String(s);
+  return d.textContent;
+}
+
+const BAD = /要確認|不明|未確定|該当なし/;
+function usable(v){
+  if(!v) return false;
+  const s = String(v).trim();
+  if(!s || BAD.test(s)) return false;
+  if(/^[-‐―–—ー]$/.test(s)) return false;
+  if(s[0]==="(" || s[0]==="（") return false;
+  return true;
+}
+/* 表記ゆれ対策。照合するときは必ず両側に同じ正規化をかける
+   (片側だけだと "Carlos K." のような空白入りの名前が一致しなくなる) */
+const nosp    = v => String(v).replace(/\s+/g, "");
+const baseKey = v => nosp(String(v).replace(/[(（].*$/, "").trim());
+
+function solo(v){
+  if(!usable(v)) return false;
+  const s = String(v);
+  if(/[、，,・／\/&＆＋+]/.test(s)) return false;
+  if(s.length > 24) return false;
+  return true;
+}
+function involves(song, field, person){
+  const v = nosp(song[field] || "");
+  const p = baseKey(person);
+  if(!v || !p) return false;
+  return v.includes(p);
+}
+const notInvolved = (song, field, person) => !involves(song, field, person);
+
+const bare  = t => { const m = String(t).match(/^「([^」]+)」$/); return m ? m[1] : String(t); };
+const quote = t => `「${bare(t)}」`;
+const songLabel = s => quote(s.title);
+const songFull  = s => `${quote(s.title)}（${s.cd}／${s.date}）`;
+
+function ordWord(n){
+  const suf = (n%100>=10 && n%100<=20) ? "th" : ({1:"st",2:"nd",3:"rd"}[n%10] || "th");
+  return n + suf;
+}
+
+function makeChoices(answer, distractors, n=4){
+  const seen = new Set([baseKey(answer)]);
+  const pool = [];
+  for(const d of distractors){
+    if(!d) continue;
+    const k = baseKey(d);
+    if(seen.has(k)) continue;
+    seen.add(k);
+    pool.push(d);
+  }
+  if(pool.length < n-1) return null;
+  return shuf([answer, ...shuf(pool).slice(0, n-1)]);
+}
+const Q = o => o;
+
+/* ---------------- 出題テンプレート ---------------- */
+const CREDITS = [
+  {key:"composer",      label:"作曲"},
+  {key:"arranger",      label:"編曲"},
+  {key:"lyricist",      label:"作詞"},
+  {key:"choreographer", label:"振付"},
+  {key:"director",      label:"MV監督"},
+];
+
+const GENERATORS = [
+
+{ id:"center", cat:"楽曲", weight:14, gen(ctx){
+  const cands = ctx.songs.filter(s => solo(s.center));
+  if(!cands.length) return null;
+  const s = rnd(cands);
+  const others = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center).map(x => x.center);
+  const ch = makeChoices(s.center, others);
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:s.g, tag:"センター", src:{song:s},
+    text:`${s.g}の${songLabel(s)}でセンターを務めたのは?`,
+    choices:ch, answer:s.center,
+    explain:`${songFull(s)}<br>センター: <b>${esc(s.center)}</b>／種類: ${esc(s.type)}`
+  });
+}},
+
+{ id:"credit", cat:"楽曲", weight:18, gen(ctx){
+  const c = rnd(CREDITS);
+  const cands = ctx.songs.filter(s => solo(s[c.key]));
+  if(!cands.length) return null;
+  const s = rnd(cands);
+  const others = ctx.songs.filter(x => x.g===s.g && solo(x[c.key]) && x[c.key]!==s[c.key]).map(x => x[c.key]);
+  const ch = makeChoices(s[c.key], others);
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:s.g, tag:c.label, src:{song:s, field:c.key},
+    text:`${s.g}${songLabel(s)}の<span class="em">${c.label}</span>を担当したのは?`,
+    choices:ch, answer:s[c.key],
+    explain:`${songFull(s)}<br>${c.label}: <b>${esc(s[c.key])}</b>`
+  });
+}},
+
+{ id:"credit-which", cat:"楽曲", weight:12, gen(ctx){
+  const c = rnd(CREDITS);
+  const cands = ctx.songs.filter(s => solo(s[c.key]));
+  if(!cands.length) return null;
+  const s = rnd(cands);
+  const person = s[c.key];
+  const wrong = ctx.songs
+    .filter(x => x.g===s.g && x.title!==s.title && notInvolved(x, c.key, person))
+    .map(x => x.title);
+  const ch = makeChoices(s.title, wrong);
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:s.g, tag:c.label+"逆引き", src:{song:s, field:c.key, person},
+    text:`${s.g}の楽曲のうち、<span class="em">${esc(person)}</span>が${c.label}を担当したのは?`,
+    choices:ch.map(t=>quote(t)), answer:quote(s.title),
+    explain:`${songFull(s)}<br>${c.label}: <b>${esc(person)}</b>`
+  });
+}},
+
+{ id:"credit-not", cat:"楽曲", weight:12, gen(ctx){
+  const c = rnd(CREDITS);
+  const cands = ctx.songs.filter(s => solo(s[c.key]));
+  if(!cands.length) return null;
+  const base = rnd(cands);
+  const person = base[c.key];
+  const mine = ctx.songs.filter(x => x.g===base.g && involves(x, c.key, person));
+  if(mine.length < 3) return null;
+  const wrongPool = ctx.songs.filter(x =>
+    x.g===base.g && usable(x[c.key]) && notInvolved(x, c.key, person));
+  if(!wrongPool.length) return null;
+  const answer = rnd(wrongPool);
+  const three = shuf(mine).slice(0,3);
+  if(three.some(x => x.title===answer.title)) return null;
+  const titles = uniq([answer.title, ...three.map(x=>x.title)]);
+  if(titles.length < 4) return null;
+  return Q({
+    cat:"楽曲", group:base.g, tag:c.label+"／除外",
+    src:{song:answer, field:c.key, person, others:three.map(x=>x.title)},
+    text:`次のうち、<span class="em">${esc(person)}</span>が${c.label}を担当して<span class="em">いない</span>のは?`,
+    choices:shuf(titles).map(t=>quote(t)), answer:quote(answer.title),
+    explain:`${songFull(answer)}<br>この曲の${c.label}は <b>${esc(answer[c.key])}</b>。<br>` +
+            `他の3曲はいずれも ${esc(person)} が${c.label}を担当。`
+  });
+}},
+
+{ id:"single-num", cat:"楽曲", weight:12, gen(ctx){
+  const cands = ctx.songs.filter(s => s.num && s.kind);
+  if(!cands.length) return null;
+  const s = rnd(cands);
+  const near = [];
+  for(let d=-4; d<=4; d++){
+    const n = s.num + d;
+    if(n>=1 && n!==s.num) near.push(`${ordWord(n)}${s.kind}`);
+  }
+  const ch = makeChoices(`${ordWord(s.num)}${s.kind}`, shuf(near));
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:s.g, tag:"収録CD", src:{song:s},
+    text:`${s.g}${songLabel(s)}が収録されているのは?`,
+    choices:ch, answer:`${ordWord(s.num)}${s.kind}`,
+    explain:`${songFull(s)}<br>収録: <b>${esc(s.cd)}</b>（${s.date} 発売）`
+  });
+}},
+
+{ id:"cd-title", cat:"楽曲", weight:10, gen(ctx){
+  const cands = ctx.songs.filter(s => usable(s.cdBase) && s.cdBase !== s.title);
+  if(!cands.length) return null;
+  const s = rnd(cands);
+  const others = ctx.songs.filter(x => x.g===s.g && usable(x.cdBase) && x.cdBase!==s.cdBase).map(x => x.cdBase);
+  const ch = makeChoices(s.cdBase, others);
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:s.g, tag:"収録CD", src:{song:s},
+    text:`${s.g}${songLabel(s)}が収録されているCDのタイトルは?`,
+    choices:ch.map(t=>quote(t)), answer:quote(s.cdBase),
+    explain:`${songFull(s)}<br>収録CD: <b>${esc(s.cd)}</b>`
+  });
+}},
+
+{ id:"year", cat:"楽曲", weight:8, gen(ctx){
+  const cands = ctx.songs.filter(s => s.year);
+  if(!cands.length) return null;
+  const s = rnd(cands);
+  const y = parseInt(s.year,10);
+  const near = [];
+  for(let d=-4; d<=4; d++) if(d!==0 && y+d>=2011 && y+d<=2026) near.push(String(y+d));
+  const ch = makeChoices(s.year, shuf(near));
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:s.g, tag:"発売年", src:{song:s},
+    text:`${s.g}${songLabel(s)}がリリースされたのは何年?`,
+    choices:ch.map(v=>v+"年"), answer:s.year+"年",
+    explain:`${songFull(s)}<br>発売日: <b>${s.date}</b>`
+  });
+}},
+
+{ id:"title-track", cat:"楽曲", weight:8, gen(ctx){
+  const g = rnd(uniq(ctx.songs.map(s=>s.g)));
+  const gs = ctx.songs.filter(s=>s.g===g);
+  const hits = gs.filter(s => s.type==="表題");
+  const miss = gs.filter(s => s.type && s.type!=="表題");
+  if(!hits.length || miss.length<3) return null;
+  const s = rnd(hits);
+  const ch = makeChoices(s.title, shuf(miss).map(x=>x.title));
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:g, tag:"表題曲", src:{song:s},
+    text:`次のうち、${g}の<span class="em">表題曲</span>はどれ?`,
+    choices:ch.map(t=>quote(t)), answer:quote(s.title),
+    explain:`${songFull(s)}<br>種類: <b>表題</b>／センター: ${usable(s.center)?esc(s.center):"—"}`
+  });
+}},
+
+{ id:"oldest", cat:"楽曲", weight:7, gen(ctx){
+  const g = rnd(uniq(ctx.songs.map(s=>s.g)));
+  const gs = ctx.songs.filter(s=>s.g===g && s.date);
+  const byDate = {};
+  gs.forEach(s => { if(!byDate[s.date]) byDate[s.date] = s; });
+  const picks = shuf(Object.values(byDate)).slice(0,4);
+  if(picks.length < 4) return null;
+  const sorted = picks.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const ans = sorted[0];
+  return Q({
+    cat:"楽曲", group:g, tag:"リリース順", src:{songs:picks.map(s=>s.title)},
+    text:`次の${g}の楽曲のうち、<span class="em">最も古い</span>のは?`,
+    choices:picks.map(s=>quote(s.title)), answer:quote(ans.title),
+    explain: sorted.map(s=>`${s.date}　${songLabel(s)}`).join("<br>")
+  });
+}},
+
+{ id:"member-center-song", cat:"両方", weight:9, gen(ctx){
+  const cands = ctx.songs.filter(s => solo(s.center));
+  if(!cands.length) return null;
+  const s = rnd(cands);
+  const wrong = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center).map(x => x.title);
+  const ch = makeChoices(s.title, wrong);
+  if(!ch) return null;
+  return Q({
+    cat:"楽曲", group:s.g, tag:"センター逆引き", src:{song:s},
+    text:`${s.g}の<span class="em">${esc(s.center)}</span>がセンターを務めたのは?`,
+    choices:ch.map(t=>quote(t)), answer:quote(s.title),
+    explain:`${songFull(s)}<br>センター: <b>${esc(s.center)}</b>`
+  });
+}},
+
+{ id:"member-period", cat:"メンバー", weight:11, gen(ctx){
+  const cands = ctx.members.filter(m => usable(m.period));
+  if(!cands.length) return null;
+  const m = rnd(cands);
+  const others = ctx.members.filter(x => x.g===m.g && usable(x.period) && x.period!==m.period).map(x => x.period);
+  const ch = makeChoices(m.period, others);
+  if(!ch) return null;
+  return Q({
+    cat:"メンバー", group:m.g, tag:"期", src:{member:m},
+    text:`${m.g}の<span class="em">${esc(m.name)}</span>は何期生?`,
+    choices:ch, answer:m.period,
+    explain:`<b>${esc(m.name)}</b>（${m.g}）<br>${esc(m.period)}／${esc(m.status)}／在籍: ${esc(m.tenure)}`
+  });
+}},
+
+{ id:"member-color", cat:"メンバー", weight:11, gen(ctx){
+  const cands = ctx.members.filter(m => usable(m.color));
+  if(!cands.length) return null;
+  const m = rnd(cands);
+  const others = ctx.members.filter(x => x.g===m.g && usable(x.color) && x.color!==m.color).map(x => x.color);
+  const ch = makeChoices(m.color, others);
+  if(!ch) return null;
+  return Q({
+    cat:"メンバー", group:m.g, tag:"サイリウムカラー", src:{member:m},
+    text:`${m.g}の<span class="em">${esc(m.name)}</span>のサイリウムカラーは?`,
+    choices:ch, answer:m.color,
+    explain:`<b>${esc(m.name)}</b>（${m.g}）<br>サイリウムカラー: <b>${esc(m.color)}</b>／${esc(m.period)}`
+  });
+}},
+
+{ id:"member-birth", cat:"メンバー", weight:8, gen(ctx){
+  const cands = ctx.members.filter(m => /^\d{2}\/\d{2}$/.test(m.birthday||""));
+  if(!cands.length) return null;
+  const m = rnd(cands);
+  const mm = parseInt(m.birthday.slice(0,2),10);
+  const all = []; for(let i=1;i<=12;i++) if(i!==mm) all.push(i+"月");
+  const ch = makeChoices(mm+"月", shuf(all));
+  if(!ch) return null;
+  return Q({
+    cat:"メンバー", group:m.g, tag:"誕生日", src:{member:m},
+    text:`${m.g}の<span class="em">${esc(m.name)}</span>の誕生日は何月?`,
+    choices:ch, answer:mm+"月",
+    explain:`<b>${esc(m.name)}</b>（${m.g}）<br>誕生日: <b>${m.birthday}</b>／${esc(m.period)}`
+  });
+}},
+
+{ id:"member-group", cat:"メンバー", weight:9, gen(ctx){
+  const cands = ctx.members.filter(m => m.uniqueGroup);
+  if(!cands.length) return null;
+  const m = rnd(cands);
+  const ch = makeChoices(m.g, D.groups.filter(g => g!==m.g));
+  if(!ch) return null;
+  return Q({
+    cat:"メンバー", group:m.g, tag:"所属グループ", src:{member:m},
+    text:`<span class="em">${esc(m.name)}</span>が所属している(していた)グループは?`,
+    choices:ch, answer:m.g,
+    explain:`<b>${esc(m.name)}</b>／${m.g} ${esc(m.period)}<br>在籍: ${esc(m.tenure)}`
+  });
+}},
+
+{ id:"same-period", cat:"メンバー", weight:8, gen(ctx){
+  const m = rnd(ctx.members.filter(x => usable(x.period)));
+  if(!m) return null;
+  const same = ctx.members.filter(x => x.g===m.g && x.period===m.period && x.name!==m.name);
+  const diff = ctx.members.filter(x => x.g===m.g && usable(x.period) && x.period!==m.period);
+  if(!same.length || diff.length<3) return null;
+  const ans = rnd(same);
+  const ch = makeChoices(ans.name, shuf(diff).map(x=>x.name));
+  if(!ch) return null;
+  return Q({
+    cat:"メンバー", group:m.g, tag:"同期", src:{member:m, other:ans.name},
+    text:`${m.g}の<span class="em">${esc(m.name)}</span>と<span class="em">同じ期</span>のメンバーは?`,
+    choices:ch, answer:ans.name,
+    explain:`<b>${esc(m.name)}</b> と <b>${esc(ans.name)}</b> はどちらも ${m.g} ${esc(m.period)}。`
+  });
+}},
+
+];
+
+function buildContext(groups){
+  return {
+    songs:   D.songs.filter(s => groups.includes(s.g)),
+    members: D.members.filter(m => groups.includes(m.g)),
+  };
+}
+function pickGenerators(cat){
+  return GENERATORS.filter(g => {
+    if(cat==="both") return true;
+    if(cat==="song")   return g.cat==="楽曲" || g.cat==="両方";
+    if(cat==="member") return g.cat==="メンバー" || g.cat==="両方";
+    return true;
+  });
+}
+function weightedPick(gens){
+  const total = gens.reduce((a,g)=>a+g.weight,0);
+  let r = Math.random()*total;
+  for(const g of gens){ r -= g.weight; if(r<=0) return g; }
+  return gens[gens.length-1];
+}
+function buildQuiz(groups, cat, count){
+  const ctx = buildContext(groups);
+  const gens = pickGenerators(cat);
+  const out = [], seen = new Set();
+  let guard = 0;
+  while(out.length < count && guard < count*400){
+    guard++;
+    const g = weightedPick(gens);
+    let q = null;
+    try { q = g.gen(ctx); } catch(e) { q = null; }
+    if(!q || !q.choices || q.choices.length<4) continue;
+    if(!q.choices.includes(q.answer)) continue;
+    const key = g.id + "|" + q.text;
+    if(seen.has(key)) continue;
+    seen.add(key);
+    q.genId = g.id;
+    out.push(q);
+  }
+  return out;
+}
+
+/* ================= 画面切り替え ================= */
+let currentView = "quiz";
+function setView(v){
+  currentView = v;
+  ["quiz","songs","members","reports"].forEach(x =>
+    $("view-"+x).classList.toggle("hidden", x!==v));
+  document.querySelectorAll("nav button").forEach(b =>
+    b.setAttribute("aria-current", b.dataset.view===v));
+  window.scrollTo({top:0});
+  if(v==="songs"  && !songsInit)  initSongs();
+  if(v==="members"&& !memInit)    initMembers();
+  if(v==="reports") renderReports();
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => setView(b.dataset.view));
+
+/* ================= クイズ画面 ================= */
+const state = { groups: D.groups.slice(), cat:"both", count:10, quiz:[], idx:0, score:0, log:[] };
+
+function renderSetup(){
+  const gc = $("groupChips"); gc.innerHTML = "";
+  D.groups.forEach(g => {
+    const b = document.createElement("button");
+    const col = GROUP_COLORS[g] || {c:"#26314f", f:"#fff"};
+    b.className = "chip"; b.textContent = g; b.dataset.color = "1";
+    b.style.setProperty("--c", col.c); b.style.setProperty("--cf", col.f);
+    b.setAttribute("aria-pressed", state.groups.includes(g));
+    b.onclick = () => {
+      const i = state.groups.indexOf(g);
+      if(i>=0) state.groups.splice(i,1); else state.groups.push(g);
+      b.setAttribute("aria-pressed", state.groups.includes(g));
+      updateStart();
+    };
+    gc.appendChild(b);
+  });
+  const cc = $("catChips"); cc.innerHTML = "";
+  [["both","楽曲＋メンバー"],["song","楽曲だけ"],["member","メンバーだけ"]].forEach(([v,label]) => {
+    const b = document.createElement("button");
+    b.className="chip"; b.textContent=label;
+    b.setAttribute("aria-pressed", state.cat===v);
+    b.onclick = () => { state.cat=v; renderSetup(); };
+    cc.appendChild(b);
+  });
+  const nc = $("countChips"); nc.innerHTML = "";
+  [5,10,20,30].forEach(n => {
+    const b = document.createElement("button");
+    b.className="chip"; b.textContent=n+"問";
+    b.setAttribute("aria-pressed", state.count===n);
+    b.onclick = () => { state.count=n; renderSetup(); };
+    nc.appendChild(b);
+  });
+  updateStart();
+}
+function updateStart(){
+  const ok = state.groups.length>0;
+  $("startBtn").disabled = !ok;
+  const ctx = buildContext(state.groups);
+  $("setupNote").textContent = ok
+    ? `対象: 楽曲 ${ctx.songs.length}件 ／ メンバー ${ctx.members.length}名`
+    : "グループを1つ以上選んでください";
+}
+document.querySelectorAll("[data-all]").forEach(b => {
+  b.onclick = () => { state.groups = b.dataset.all==="1" ? D.groups.slice() : []; renderSetup(); };
+});
+
+function showQuizSection(sec){
+  ["setup","quiz","result"].forEach(s => $(s).classList.toggle("hidden", s!==sec));
+  window.scrollTo({top:0});
+}
+function startQuiz(){
+  const quiz = buildQuiz(state.groups, state.cat, state.count);
+  if(!quiz.length){ alert("この条件では問題を作れませんでした。グループやジャンルを増やしてみてください。"); return; }
+  state.quiz = quiz; state.idx = 0; state.score = 0; state.log = [];
+  showQuizSection("quiz");
+  renderQuestion();
+}
+function renderQuestion(){
+  const q = state.quiz[state.idx], total = state.quiz.length;
+  $("qCount").textContent = `第 ${state.idx+1} 問 / 全 ${total} 問`;
+  $("qScore").textContent = `正解 ${state.score}`;
+  $("qBar").style.width = (state.idx/total*100) + "%";
+  const col = GROUP_COLORS[q.group] || {c:"#26314f", f:"#fff"};
+  $("qBadges").innerHTML =
+    `<span class="badge" style="background:${col.c};color:${col.f}">${esc(q.group)}</span>` +
+    `<span class="badge tag">${esc(q.tag)}</span>`;
+  $("qText").innerHTML = q.text;
+  const box = $("qChoices"); box.innerHTML = "";
+  q.choices.forEach((c,i) => {
+    const b = document.createElement("button");
+    b.className = "choice"; b.dataset.value = c;
+    b.innerHTML = `<span class="no">${"ABCD"[i]}</span><span></span>`;
+    b.lastElementChild.textContent = c;
+    b.onclick = () => answer(b, c);
+    box.appendChild(b);
+  });
+  $("qFeedback").classList.add("hidden");
+  $("nextBtn").classList.add("hidden");
+  const rl = $("qReport");
+  rl.textContent = "この問題がおかしい？ 報告する";
+  rl.classList.remove("done"); rl.disabled = false;
+}
+function answer(btn, choice){
+  const q = state.quiz[state.idx];
+  const ok = choice === q.answer;
+  if(ok) state.score++;
+  state.log.push({q, choice, ok});
+  [...$("qChoices").children].forEach(b => {
+    b.disabled = true;
+    if(b.dataset.value === q.answer) b.classList.add("correct");
+    else if(b===btn) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  $("qVerdict").className = "verdict " + (ok ? "ok" : "ng");
+  $("qVerdict").textContent = ok ? "正解！" : `不正解　正解は ${q.answer}`;
+  $("qExplain").innerHTML = q.explain;
+  $("qFeedback").classList.remove("hidden");
+  $("qScore").textContent = `正解 ${state.score}`;
+  $("qBar").style.width = ((state.idx+1)/state.quiz.length*100) + "%";
+  const btnNext = $("nextBtn");
+  btnNext.textContent = (state.idx+1 >= state.quiz.length) ? "結果を見る" : "次の問題へ";
+  btnNext.classList.remove("hidden");
+}
+$("nextBtn").onclick = () => {
+  state.idx++;
+  if(state.idx >= state.quiz.length) renderResult(); else renderQuestion();
+};
+$("startBtn").onclick = startQuiz;
+$("againBtn").onclick = startQuiz;
+$("quitBtn").onclick  = () => showQuizSection("setup");
+$("backBtn").onclick  = () => showQuizSection("setup");
+
+function renderResult(){
+  const total = state.quiz.length, sc = state.score, pct = Math.round(sc/total*100);
+  $("rScore").textContent = sc;
+  $("rTotal").textContent = ` / ${total}`;
+  const msg = pct===100 ? "全問正解！完璧です" : pct>=80 ? "かなり詳しい" :
+              pct>=60 ? "good、あと少し" : pct>=40 ? "まずまず" : "これから覚えていきましょう";
+  $("rMsg").textContent = `正答率 ${pct}%　—　${msg}`;
+  const ul = $("rReview"); ul.innerHTML = "";
+  state.log.forEach((l,i) => {
+    const li = document.createElement("li");
+    li.innerHTML =
+      `<span class="mk ${l.ok?"ok":"ng"}">${l.ok?"○":"×"}</span>` +
+      `<span><span>${i+1}. ${esc(plain(l.q.text))}</span>` +
+      (l.ok ? "" : `<div class="ans">あなた: ${esc(l.choice)}　／　正解: ${esc(l.q.answer)}</div>`) +
+      `</span>`;
+    ul.appendChild(li);
+  });
+  showQuizSection("result");
+}
+
+/* ================= サイリウムカラーの色見本 ================= */
+const COLOR_HEX = [
+  ["パステルブルー","#a8d5f2"],["サクラピンク","#f7c5d3"],["パールグリーン","#c3e3c4"],
+  ["エメラルドグリーン","#2fbf9a"],["アイスグリーン","#c9ece0"],["ミントグリーン","#9fe3c8"],
+  ["ホットピンク","#ec4a86"],["パッションピンク","#ec4a86"],["情熱ピンク","#ec4a86"],
+  ["ターコイズ","#2fc3c9"],["バイオレット","#6f4fd0"],["ボルドー","#7b1f34"],
+  ["ホワイト","#ffffff"],["ブラック","#2a2a2a"],["レッド","#e2372f"],["ブルー","#2f6fd0"],
+  ["イエロー","#f5cf3d"],["グリーン","#3fa85f"],["パープル","#7b3fa0"],["オレンジ","#f0913a"],
+  ["ゴールド","#d9b64e"],["シルバー","#c8ccd2"],["ピンク","#f39ab8"],
+  ["薄ピンク","#f8cdd9"],["薄紫","#b79ad6"],["濃ピンク","#ec4a86"],["もも色","#f6a1b0"],
+  ["さくら色","#f7c5d3"],["黄緑","#9ed35a"],["水色","#7cc7ea"],
+  ["白","#ffffff"],["黒","#2a2a2a"],["赤","#e2372f"],["青","#2f6fd0"],["黄色","#f5cf3d"],
+  ["黄","#f5cf3d"],["緑","#3fa85f"],["紫","#7b3fa0"],["橙","#f0913a"],["桃","#f6a1b0"],
+  ["菫","#6f4fd0"],["金","#d9b64e"],["銀","#c8ccd2"],
+];
+function colorSwatches(v){
+  if(!usable(v)) return "";
+  const parts = String(v).split(/[×✕x╳／\/・]/).map(s=>s.trim()).filter(Boolean).slice(0,3);
+  const hexes = [];
+  for(const p of parts){
+    const hit = COLOR_HEX.find(([name]) => p.includes(name));
+    if(hit) hexes.push(hit[1]);
+  }
+  if(!hexes.length) return "";
+  return `<span class="swatches">` +
+    hexes.map(h=>`<i class="sw" style="background:${h}"></i>`).join("") + `</span>`;
+}
+
+/* ================= 楽曲DB ================= */
+const SONG_TYPES = ["表題","カップリング","ユニット","ソロ"];
+const songState = { q:"", groups:new Set(D.groups), types:new Set(SONG_TYPES), sort:"date-asc", limit:60 };
+let songsInit = false;
+
+function typeClass(t){
+  return t==="表題" ? "hyoudai" : t==="ユニット" ? "unit" : t==="ソロ" ? "solo" : "";
+}
+function songMatches(s){
+  if(!songState.groups.has(s.g)) return false;
+  if(s.type && !songState.types.has(s.type) && SONG_TYPES.includes(s.type)) return false;
+  const q = songState.q.trim();
+  if(!q) return true;
+  const hay = [s.g,s.title,s.cd,s.date,s.type,s.center,s.lyricist,s.composer,s.arranger,
+               s.choreographer,s.director,s.members,s.notes].join(" ").toLowerCase();
+  return q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+}
+function songSorted(list){
+  const c = songState.sort;
+  const a = list.slice();
+  // Excelは発売日の昇順で並んでいるので、idx順＝Excelの並びと完全に一致する
+  if(c==="date-asc")  a.sort((x,y)=> (x.date||"").localeCompare(y.date||"") || x.idx-y.idx);
+  if(c==="date-desc") a.sort((x,y)=> (y.date||"").localeCompare(x.date||"") || y.idx-x.idx);
+  if(c==="title")     a.sort((x,y)=> x.title.localeCompare(y.title,"ja"));
+  return a;
+}
+function songRowHTML(s, i){
+  const col = GROUP_COLORS[s.g] || {c:"#ccc"};
+  const tag = s.type ? `<span class="ttag ${typeClass(s.type)}">${esc(s.type)}</span>` : "";
+  const center = usable(s.center) ? `センター: ${esc(s.center)}` : "";
+  return `
+  <div class="row" data-kind="song" data-i="${i}">
+    <button type="button">
+      <span class="gbar" style="background:${col.c}"></span>
+      <span class="body">
+        <span class="t1">${esc(bare(s.title))}${tag}</span>
+        <span class="t2">${esc(s.g)}　${esc(s.cd)}　${esc(s.date)}</span>
+        ${center ? `<span class="t3">${center}</span>` : ""}
+      </span>
+      <span class="chev">▶</span>
+    </button>
+  </div>`;
+}
+function songDetailHTML(s){
+  const f = (label, v, cls) =>
+    v && String(v).trim() && String(v).trim()!=="-"
+      ? `<dt>${label}</dt><dd class="${BAD.test(v)?"warn":""}${cls?" "+cls:""}">${esc(v)}</dd>` : "";
+  return `<div class="detail"><dl>
+    ${f("作詞", s.lyricist)}${f("作曲", s.composer)}${f("編曲", s.arranger)}
+    ${f("振付", s.choreographer)}${f("MV監督", s.director)}
+    ${f("センター", s.center)}${f("参加メンバー", s.members)}
+    ${f("種類", s.type)}${f("備考", s.notes)}
+    ${f("情報源", s.sources, "src")}
+  </dl></div>`;
+}
+function renderSongs(){
+  const list = songSorted(D.songs.filter(songMatches));
+  $("songCount").textContent = `${list.length}件`;
+  const shown = list.slice(0, songState.limit);
+  $("songRows").innerHTML = shown.length
+    ? shown.map((s,i)=>songRowHTML(s,i)).join("")
+    : `<p class="empty">条件に合う曲がありません</p>`;
+  $("songRows")._list = shown;
+  $("songMore").classList.toggle("hidden", list.length <= songState.limit);
+  $("songMore").textContent = `さらに表示（残り ${Math.max(0,list.length-songState.limit)}件）`;
+}
+function initSongs(){
+  songsInit = true;
+  const gc = $("songGroups");
+  D.groups.forEach(g => {
+    const b = document.createElement("button");
+    const col = GROUP_COLORS[g];
+    b.className="chip sm"; b.textContent=g; b.dataset.color="1";
+    b.style.setProperty("--c",col.c); b.style.setProperty("--cf",col.f);
+    b.setAttribute("aria-pressed","true");
+    b.onclick = () => {
+      songState.groups.has(g) ? songState.groups.delete(g) : songState.groups.add(g);
+      b.setAttribute("aria-pressed", songState.groups.has(g));
+      songState.limit=60; renderSongs();
+    };
+    gc.appendChild(b);
+  });
+  const tc = $("songTypes");
+  SONG_TYPES.forEach(t => {
+    const b = document.createElement("button");
+    b.className="chip sm"; b.textContent=t;
+    b.setAttribute("aria-pressed","true");
+    b.onclick = () => {
+      songState.types.has(t) ? songState.types.delete(t) : songState.types.add(t);
+      b.setAttribute("aria-pressed", songState.types.has(t));
+      songState.limit=60; renderSongs();
+    };
+    tc.appendChild(b);
+  });
+  const sc = $("songSort");
+  [["date-asc","発売日が古い順"],["date-desc","発売日が新しい順"],["title","曲名順"]].forEach(([v,l])=>{
+    const b=document.createElement("button");
+    b.className="chip sm"; b.textContent=l;
+    b.setAttribute("aria-pressed", songState.sort===v);
+    b.onclick=()=>{
+      songState.sort=v; songState.limit=60;
+      [...sc.children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+      renderSongs();
+    };
+    sc.appendChild(b);
+  });
+  $("songSearch").oninput = e => { songState.q = e.target.value; songState.limit=60; renderSongs(); };
+  $("songMore").onclick = () => { songState.limit += 60; renderSongs(); };
+  $("songRows").addEventListener("click", e => {
+    const row = e.target.closest(".row"); if(!row) return;
+    toggleRow(row, () => songDetailHTML($("songRows")._list[+row.dataset.i]));
+  });
+  renderSongs();
+}
+
+/* ================= メンバーDB ================= */
+const memState = { q:"", groups:new Set(D.groups), status:new Set(["現役","卒業"]), sort:"period", limit:60 };
+let memInit = false;
+
+const statusOf = m => String(m.status||"").includes("卒") ? "卒業" : "現役";
+function periodNum(p){ const m=String(p||"").match(/(\d+)/); return m?+m[1]:999; }
+function memMatches(m){
+  if(!memState.groups.has(m.g)) return false;
+  if(!memState.status.has(statusOf(m))) return false;
+  const q = memState.q.trim();
+  if(!q) return true;
+  const hay = [m.g,m.name,m.yomi,m.period,m.status,m.tenure,m.color,m.centerSongs,m.notes,m.birthday]
+    .join(" ").toLowerCase();
+  return q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+}
+function memSorted(list){
+  const a = list.slice(), c = memState.sort;
+  // Excelはグループごとにシートが分かれ、各シート内は 期→五十音 の並び。
+  // グループ順 → シート内の行番号(idx) の順にすると、Excelの並びと完全に一致する。
+  if(c==="period") a.sort((x,y)=>
+    (D.groups.indexOf(x.g) - D.groups.indexOf(y.g)) || (x.idx - y.idx));
+  if(c==="name")  a.sort((x,y)=> String(x.yomi||x.name).localeCompare(String(y.yomi||y.name),"ja"));
+  if(c==="birth") a.sort((x,y)=> String(x.birthday||"99/99").localeCompare(String(y.birthday||"99/99")));
+  return a;
+}
+function memRowHTML(m, i){
+  const col = GROUP_COLORS[m.g] || {c:"#ccc"};
+  const st = statusOf(m);
+  const stag = `<span class="ttag ${st==="現役"?"gen":"grad"}">${st}</span>`;
+  const color = usable(m.color)
+    ? `<span class="t3">${colorSwatches(m.color)}${esc(m.color)}</span>` : "";
+  return `
+  <div class="row" data-kind="mem" data-i="${i}">
+    <button type="button">
+      <span class="gbar" style="background:${col.c}"></span>
+      <span class="body">
+        <span class="t1">${esc(m.name)}${stag}</span>
+        <span class="t2">${esc(m.g)}　${esc(m.period)}　誕生日 ${esc(m.birthday||"—")}</span>
+        ${color}
+      </span>
+      <span class="chev">▶</span>
+    </button>
+  </div>`;
+}
+function memDetailHTML(m){
+  const f = (label, v) =>
+    v && String(v).trim() && String(v).trim()!=="-"
+      ? `<dt>${label}</dt><dd class="${BAD.test(v)?"warn":""}">${esc(v)}</dd>` : "";
+  return `<div class="detail"><dl>
+    ${f("よみ", m.yomi)}${f("期", m.period)}${f("在籍", m.status)}
+    ${f("在籍期間", m.tenure)}${f("誕生日", m.birthday)}
+    ${usable(m.color) ? `<dt>カラー</dt><dd>${colorSwatches(m.color)}${esc(m.color)}</dd>`
+                      : f("カラー", m.color)}
+    ${f("センター曲", m.centerSongs)}${f("備考", m.notes)}
+  </dl></div>`;
+}
+function renderMembers(){
+  const list = memSorted(D.members.filter(memMatches));
+  $("memCount").textContent = `${list.length}名`;
+  const shown = list.slice(0, memState.limit);
+  $("memRows").innerHTML = shown.length
+    ? shown.map((m,i)=>memRowHTML(m,i)).join("")
+    : `<p class="empty">条件に合うメンバーがいません</p>`;
+  $("memRows")._list = shown;
+  $("memMore").classList.toggle("hidden", list.length <= memState.limit);
+  $("memMore").textContent = `さらに表示（残り ${Math.max(0,list.length-memState.limit)}名）`;
+}
+function initMembers(){
+  memInit = true;
+  const gc = $("memGroups");
+  D.groups.forEach(g => {
+    const b=document.createElement("button");
+    const col=GROUP_COLORS[g];
+    b.className="chip sm"; b.textContent=g; b.dataset.color="1";
+    b.style.setProperty("--c",col.c); b.style.setProperty("--cf",col.f);
+    b.setAttribute("aria-pressed","true");
+    b.onclick=()=>{
+      memState.groups.has(g)?memState.groups.delete(g):memState.groups.add(g);
+      b.setAttribute("aria-pressed", memState.groups.has(g));
+      memState.limit=60; renderMembers();
+    };
+    gc.appendChild(b);
+  });
+  const stc = $("memStatus");
+  ["現役","卒業"].forEach(s=>{
+    const b=document.createElement("button");
+    b.className="chip sm"; b.textContent=s;
+    b.setAttribute("aria-pressed","true");
+    b.onclick=()=>{
+      memState.status.has(s)?memState.status.delete(s):memState.status.add(s);
+      b.setAttribute("aria-pressed", memState.status.has(s));
+      memState.limit=60; renderMembers();
+    };
+    stc.appendChild(b);
+  });
+  const sc = $("memSort");
+  [["period","グループ→期→五十音（Excel順）"],["name","五十音順"],["birth","誕生日順"]].forEach(([v,l])=>{
+    const b=document.createElement("button");
+    b.className="chip sm"; b.textContent=l;
+    b.setAttribute("aria-pressed", memState.sort===v);
+    b.onclick=()=>{
+      memState.sort=v; memState.limit=60;
+      [...sc.children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+      renderMembers();
+    };
+    sc.appendChild(b);
+  });
+  $("memSearch").oninput = e => { memState.q=e.target.value; memState.limit=60; renderMembers(); };
+  $("memMore").onclick = () => { memState.limit += 60; renderMembers(); };
+  $("memRows").addEventListener("click", e => {
+    const row = e.target.closest(".row"); if(!row) return;
+    toggleRow(row, () => memDetailHTML($("memRows")._list[+row.dataset.i]));
+  });
+  renderMembers();
+}
+
+function toggleRow(row, html){
+  const open = row.classList.toggle("open");
+  const cur = row.querySelector(".detail");
+  if(cur) cur.remove();
+  if(open) row.insertAdjacentHTML("beforeend", html());
+}
+
+/* ================= 報告 ================= */
+const REP_KEY = "sakamichi_quiz_reports";
+const REP_KINDS = ["正解が間違っている","選択肢がおかしい","問題文がおかしい","データが古い","その他"];
+let repKind = REP_KINDS[0];
+let serverOK = true;
+
+function localReports(){
+  try { return JSON.parse(localStorage.getItem(REP_KEY) || "[]"); } catch(e){ return []; }
+}
+function saveLocal(list){
+  try { localStorage.setItem(REP_KEY, JSON.stringify(list)); } catch(e){}
+}
+function updateDot(){
+  const n = localReports().length;
+  const dot = $("repDot");
+  dot.textContent = n;
+  dot.classList.toggle("hidden", n===0);
+}
+function toast(msg){
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2200);
+}
+
+function openReport(){
+  const q = state.quiz[state.idx];
+  if(!q) return;
+  repKind = REP_KINDS[0];
+  const ov = document.createElement("div");
+  ov.className = "overlay";
+  ov.innerHTML = `
+    <div class="modal">
+      <h3>問題の報告</h3>
+      <p class="sub">おかしいと思った点を教えてください。問題の内容は自動で記録されます。</p>
+      <div class="qbox">
+        <div><b>${esc(plain(q.text))}</b></div>
+        <div style="margin-top:5px;">選択肢: ${esc(q.choices.join(" / "))}</div>
+        <div>アプリの正解: <b>${esc(q.answer)}</b></div>
+      </div>
+      <label>どこがおかしい？</label>
+      <div class="chips" id="repKinds"></div>
+      <label style="margin-top:14px;">補足（正しい情報が分かれば書いてください）</label>
+      <textarea id="repComment" placeholder="例: センターは○○ではなく△△が正しい"></textarea>
+      <div class="acts">
+        <button class="btn sub sm" id="repCancel">キャンセル</button>
+        <button class="btn sm" id="repSend">報告する</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const kc = ov.querySelector("#repKinds");
+  REP_KINDS.forEach(k => {
+    const b=document.createElement("button");
+    b.className="chip sm"; b.textContent=k;
+    b.setAttribute("aria-pressed", repKind===k);
+    b.onclick=()=>{ repKind=k; [...kc.children].forEach(x=>x.setAttribute("aria-pressed", x===b)); };
+    kc.appendChild(b);
+  });
+  ov.onclick = e => { if(e.target===ov) ov.remove(); };
+  ov.querySelector("#repCancel").onclick = () => ov.remove();
+  ov.querySelector("#repSend").onclick = () => {
+    sendReport(q, repKind, ov.querySelector("#repComment").value.trim());
+    ov.remove();
+  };
+}
+
+function sendReport(q, kind, comment){
+  const rec = {
+    at: new Date().toISOString(),
+    kind, comment,
+    group: q.group, tag: q.tag, genId: q.genId,
+    question: plain(q.text),
+    choices: q.choices,
+    answer: q.answer,
+    src: q.src || null,
+  };
+  const list = localReports(); list.push(rec); saveLocal(list); updateDot();
+
+  // ローカルサーバー経由なら reports.jsonl にも保存する
+  // (file:// で直接開いた場合や、静的ホスティングに置いた場合は失敗するが、
+  //  ブラウザ内には保存済みなので問題ない)
+  fetch("report", {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(rec)
+  }).then(r => { serverOK = r.ok; }).catch(() => { serverOK = false; });
+
+  const rl = $("qReport");
+  rl.textContent = "報告しました（報告タブで確認できます）";
+  rl.classList.add("done"); rl.disabled = true;
+  toast("報告を受け付けました");
+}
+$("qReport").onclick = openReport;
+
+function renderReports(){
+  const list = localReports().slice().reverse();
+  $("repCount").textContent = list.length ? `${list.length}件の報告` : "";
+  $("repRows").innerHTML = list.length
+    ? list.map(r => `
+      <div class="rep">
+        <div class="meta">${new Date(r.at).toLocaleString("ja-JP")}　${esc(r.group)}／${esc(r.tag)}</div>
+        <div><span class="kind">${esc(r.kind)}</span><span class="q">${esc(r.question)}</span></div>
+        <div class="meta" style="margin-top:5px;">選択肢: ${esc(r.choices.join(" / "))}　→ アプリの正解: ${esc(r.answer)}</div>
+        ${r.comment ? `<div class="cmt">${esc(r.comment)}</div>` : ""}
+      </div>`).join("")
+    : `<p class="empty">まだ報告はありません</p>`;
+  $("repCopy").classList.toggle("hidden", !list.length);
+  $("repClear").classList.toggle("hidden", !list.length);
+}
+$("repCopy").onclick = () => {
+  const list = localReports();
+  const text = list.map((r,i) =>
+    `【${i+1}】${r.kind}\n問題: ${r.question}\n選択肢: ${r.choices.join(" / ")}\n` +
+    `アプリの正解: ${r.answer}\nグループ: ${r.group}／種類: ${r.tag}（${r.genId}）\n` +
+    (r.comment ? `補足: ${r.comment}\n` : "") +
+    (r.src ? `元データ: ${JSON.stringify(r.src)}\n` : "") + `日時: ${r.at}`
+  ).join("\n\n----------\n\n");
+  navigator.clipboard.writeText(text)
+    .then(()=>toast("コピーしました"))
+    .catch(()=>{
+      const ta=document.createElement("textarea");
+      ta.value=text; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove(); toast("コピーしました");
+    });
+};
+$("repClear").onclick = () => {
+  if(!confirm("報告をすべて削除します。よろしいですか？")) return;
+  saveLocal([]); updateDot(); renderReports(); toast("削除しました");
+};
+
+/* ================= 起動 ================= */
+window.__QUIZ = { buildQuiz, buildContext, GENERATORS, solo, usable, notInvolved, colorSwatches };
+
+renderSetup();
+updateDot();
+$("dataNote").innerHTML =
+  `収録データ: 楽曲 ${D.songs.length}件 ／ メンバー ${D.members.length}名<br>` +
+  `【要確認】の項目はクイズの出題から自動的に除外されます（DB表示では赤字で表示）`;
+
+/* オフラインでも遊べるようにする(https / localhost のときだけ有効) */
+if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+
+/* iPhoneのSafariで開いていて、まだホーム画面に追加していないときだけ案内を出す */
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const standalone = window.navigator.standalone === true ||
+                   window.matchMedia("(display-mode: standalone)").matches;
+if(isIOS && !standalone){
+  $("dataNote").insertAdjacentHTML("afterbegin",
+    `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;
+                 padding:11px 13px;margin-bottom:12px;color:var(--navy-soft);
+                 font-size:12.5px;line-height:1.7;text-align:left;">
+       <b>ホーム画面に追加すると、アプリのように使えます</b><br>
+       下の共有ボタン <b>⬆︎</b> →「ホーム画面に追加」
+     </div>`);
+}
+
+})();
+</script>
+</body>
+</html>

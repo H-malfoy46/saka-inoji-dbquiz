@@ -1,0 +1,7 @@
+# 報告の記録(ローカル運用でのみ生成される。個人の作業メモなので共有しない)
+reports.jsonl
+
+# macOS / Python が勝手に作るもの
+.DS_Store
+__pycache__/
+*.pyc
