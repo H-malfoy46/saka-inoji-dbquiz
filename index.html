@@ -89,6 +89,7 @@
   .chip[data-color][aria-pressed="true"]{background:var(--c); border-color:var(--c); color:var(--cf);}
   .chip.sm{padding:5px 11px; font-size:12.5px;}
   .row-actions{display:flex; gap:8px; margin-top:10px;}
+  .lvnote{font-size:12px; color:var(--muted); line-height:1.65; margin:11px 0 0;}
   .mini{
     background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer;
     text-decoration:underline; padding:2px 0; font-family:inherit;
@@ -307,6 +308,11 @@
         <div class="chips" id="catChips"></div>
       </div>
       <div class="card">
+        <h2>難易度</h2>
+        <div class="chips" id="levelChips"></div>
+        <p class="lvnote" id="levelNote"></p>
+      </div>
+      <div class="card">
         <h2>問題数</h2>
         <div class="chips" id="countChips"></div>
       </div>
@@ -483,6 +489,9 @@ function ordWord(n){
   return n + suf;
 }
 
+/* 4択を組み立てる。正解と誤答が(表記ゆれ込みで)重複しないよう一意化する。
+   誤答は「渡された順」に先頭から採用する(むずかしいモードでは紛らわしい順に
+   並べて渡ってくるため)。最後に並びだけ混ぜるので、正解の位置は毎回変わる。 */
 function makeChoices(answer, distractors, n=4){
   const seen = new Set([baseKey(answer)]);
   const pool = [];
@@ -494,9 +503,86 @@ function makeChoices(answer, distractors, n=4){
     pool.push(d);
   }
   if(pool.length < n-1) return null;
-  return shuf([answer, ...shuf(pool).slice(0, n-1)]);
+  return shuf([answer, ...pool.slice(0, n-1)]);
 }
 const Q = o => o;
+
+/* ---------------- 難易度 ----------------
+   難しさは3つのレバーで作っている。
+   ① 出題範囲  : やさしい=表題曲・現役メンバーだけ / むずかしい=全部
+   ② 誤答の近さ: むずかしいときは「同じCD」「同じ期」「近い年」から誤答を選ぶ(これが一番効く)
+   ③ 問題の種類: やさしい=センターや誕生日 / むずかしい=編曲・振付・MV監督          */
+
+const LEVELS = {
+  easy: {
+    label: "やさしい",
+    song:   s => s.type === "表題",
+    member: m => !String(m.status || "").includes("卒"),
+    credits: ["lyricist", "composer"],
+    near: false,                       // 誤答は遠いものから選ぶ
+    weights: {
+      center:22, "title-track":16, year:14, "member-birth":13, "member-group":13,
+      "member-period":12, "member-center-song":10, "single-num":10, credit:10,
+      "member-color":8, "same-period":8, oldest:5, "cd-title":4, "credit-which":4,
+      "credit-not":0,                  // 0 は出題しない
+    },
+  },
+  normal: {
+    label: "ふつう",
+    song: () => true, member: () => true,
+    credits: null, near: false, weights: null,   // すべて既定どおり
+  },
+  hard: {
+    label: "むずかしい",
+    song: () => true, member: () => true,
+    credits: ["arranger", "choreographer", "director", "composer"],
+    near: true,                        // 誤答は紛らわしいものから選ぶ
+    weights: {
+      credit:20, "credit-which":16, "credit-not":16, "cd-title":12, "single-num":12,
+      "member-color":10, "same-period":10, center:10, "member-center-song":8,
+      oldest:8, year:8, "member-period":6, "member-birth":6, "title-track":4,
+      "member-group":4,
+    },
+  },
+};
+
+/* 改名・派生で紛らわしいグループ(むずかしいときの誤答に使う) */
+const SIBLING_GROUPS = {
+  "欅坂46":["櫻坂46","けやき坂46","日向坂46"], "櫻坂46":["欅坂46","けやき坂46","日向坂46"],
+  "けやき坂46":["日向坂46","欅坂46","櫻坂46"], "日向坂46":["けやき坂46","欅坂46","櫻坂46"],
+  "乃木坂46":["櫻坂46","日向坂46","欅坂46"],
+  "=LOVE":["≠ME","≒JOY"], "≠ME":["=LOVE","≒JOY"], "≒JOY":["=LOVE","≠ME"],
+};
+
+/* 同じ曲が複数のCDに入っていることがある(例: 日向坂46「ゴーフルと君」は
+   7thシングルと2ndアルバムの両方に収録)。この場合「収録CDは?」「何thシングル?」
+   「発売年は?」の答えが2つできてしまうので、重複している側の値は誤答から外す。 */
+function twinValues(ctx, song, valueOf){
+  const vals = new Set();
+  for(const x of ctx.allSongs){
+    if(x.g === song.g && x.title === song.title) vals.add(valueOf(x));
+  }
+  return vals;
+}
+
+/* 誤答候補を並べ替える。むずかしい: 紛らわしいものを先頭へ / それ以外: 完全ランダム */
+function rank(ctx, list, isClose){
+  if(!ctx.near || !isClose) return shuf(list);
+  const near = [], far = [];
+  for(const x of list) (isClose(x) ? near : far).push(x);
+  return [...shuf(near), ...shuf(far)];
+}
+
+/* 数値の選択肢(年・CD番号)を、難易度に応じた離れ具合で作る */
+function numberChoices(ctx, base, fmt, min, max){
+  const offs = ctx.near ? [1,-1,2,-2,3,-3] : [3,-3,4,-4,2,-2,1,-1];
+  const out = [];
+  for(const d of offs){
+    const n = base + d;
+    if(n >= min && n <= max) out.push(fmt(n));
+  }
+  return out;
+}
 
 /* ---------------- 出題テンプレート ---------------- */
 const CREDITS = [
@@ -506,6 +592,8 @@ const CREDITS = [
   {key:"choreographer", label:"振付"},
   {key:"director",      label:"MV監督"},
 ];
+const creditsOf = ctx =>
+  ctx.credits ? CREDITS.filter(c => ctx.credits.includes(c.key)) : CREDITS;
 
 const GENERATORS = [
 
@@ -513,7 +601,8 @@ const GENERATORS = [
   const cands = ctx.songs.filter(s => solo(s.center));
   if(!cands.length) return null;
   const s = rnd(cands);
-  const others = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center).map(x => x.center);
+  const pool = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center);
+  const others = rank(ctx, pool, x => x.cdBase === s.cdBase).map(x => x.center);
   const ch = makeChoices(s.center, others);
   if(!ch) return null;
   return Q({
@@ -525,11 +614,12 @@ const GENERATORS = [
 }},
 
 { id:"credit", cat:"楽曲", weight:18, gen(ctx){
-  const c = rnd(CREDITS);
+  const c = rnd(creditsOf(ctx));
   const cands = ctx.songs.filter(s => solo(s[c.key]));
   if(!cands.length) return null;
   const s = rnd(cands);
-  const others = ctx.songs.filter(x => x.g===s.g && solo(x[c.key]) && x[c.key]!==s[c.key]).map(x => x[c.key]);
+  const pool = ctx.songs.filter(x => x.g===s.g && solo(x[c.key]) && x[c.key]!==s[c.key]);
+  const others = rank(ctx, pool, x => x.cdBase === s.cdBase).map(x => x[c.key]);
   const ch = makeChoices(s[c.key], others);
   if(!ch) return null;
   return Q({
@@ -541,14 +631,13 @@ const GENERATORS = [
 }},
 
 { id:"credit-which", cat:"楽曲", weight:12, gen(ctx){
-  const c = rnd(CREDITS);
+  const c = rnd(creditsOf(ctx));
   const cands = ctx.songs.filter(s => solo(s[c.key]));
   if(!cands.length) return null;
   const s = rnd(cands);
   const person = s[c.key];
-  const wrong = ctx.songs
-    .filter(x => x.g===s.g && x.title!==s.title && notInvolved(x, c.key, person))
-    .map(x => x.title);
+  const pool = ctx.songs.filter(x => x.g===s.g && x.title!==s.title && notInvolved(x, c.key, person));
+  const wrong = rank(ctx, pool, x => x.cdBase === s.cdBase).map(x => x.title);
   const ch = makeChoices(s.title, wrong);
   if(!ch) return null;
   return Q({
@@ -560,19 +649,20 @@ const GENERATORS = [
 }},
 
 { id:"credit-not", cat:"楽曲", weight:12, gen(ctx){
-  const c = rnd(CREDITS);
+  const c = rnd(creditsOf(ctx));
   const cands = ctx.songs.filter(s => solo(s[c.key]));
   if(!cands.length) return null;
   const base = rnd(cands);
   const person = base[c.key];
   const mine = ctx.songs.filter(x => x.g===base.g && involves(x, c.key, person));
   if(mine.length < 3) return null;
+  // 誤答(＝正解)側は、担当者がはっきり分かる曲だけにする(解説を出せるように)
   const wrongPool = ctx.songs.filter(x =>
     x.g===base.g && usable(x[c.key]) && notInvolved(x, c.key, person));
   if(!wrongPool.length) return null;
-  const answer = rnd(wrongPool);
-  const three = shuf(mine).slice(0,3);
-  if(three.some(x => x.title===answer.title)) return null;
+  const answer = rnd(rank(ctx, wrongPool, x => x.cdBase === base.cdBase));
+  const three = rank(ctx, mine, x => x.cdBase === answer.cdBase).slice(0,3);
+  if(three.length < 3 || three.some(x => x.title===answer.title)) return null;
   const titles = uniq([answer.title, ...three.map(x=>x.title)]);
   if(titles.length < 4) return null;
   return Q({
@@ -589,12 +679,10 @@ const GENERATORS = [
   const cands = ctx.songs.filter(s => s.num && s.kind);
   if(!cands.length) return null;
   const s = rnd(cands);
-  const near = [];
-  for(let d=-4; d<=4; d++){
-    const n = s.num + d;
-    if(n>=1 && n!==s.num) near.push(`${ordWord(n)}${s.kind}`);
-  }
-  const ch = makeChoices(`${ordWord(s.num)}${s.kind}`, shuf(near));
+  const twins = twinValues(ctx, s, x => x.num ? `${ordWord(x.num)}${x.kind}` : "");
+  const near = numberChoices(ctx, s.num, n => `${ordWord(n)}${s.kind}`, 1, 99)
+                 .filter(v => !twins.has(v));
+  const ch = makeChoices(`${ordWord(s.num)}${s.kind}`, near);
   if(!ch) return null;
   return Q({
     cat:"楽曲", group:s.g, tag:"収録CD", src:{song:s},
@@ -608,7 +696,9 @@ const GENERATORS = [
   const cands = ctx.songs.filter(s => usable(s.cdBase) && s.cdBase !== s.title);
   if(!cands.length) return null;
   const s = rnd(cands);
-  const others = ctx.songs.filter(x => x.g===s.g && usable(x.cdBase) && x.cdBase!==s.cdBase).map(x => x.cdBase);
+  const twins = twinValues(ctx, s, x => x.cdBase);
+  const pool = ctx.songs.filter(x => x.g===s.g && usable(x.cdBase) && !twins.has(x.cdBase));
+  const others = rank(ctx, pool, x => x.year === s.year).map(x => x.cdBase);
   const ch = makeChoices(s.cdBase, others);
   if(!ch) return null;
   return Q({
@@ -624,9 +714,10 @@ const GENERATORS = [
   if(!cands.length) return null;
   const s = rnd(cands);
   const y = parseInt(s.year,10);
-  const near = [];
-  for(let d=-4; d<=4; d++) if(d!==0 && y+d>=2011 && y+d<=2026) near.push(String(y+d));
-  const ch = makeChoices(s.year, shuf(near));
+  const twins = twinValues(ctx, s, x => x.year);
+  const near = numberChoices(ctx, y, n => String(n), 2011, 2026)
+                 .filter(v => !twins.has(v));
+  const ch = makeChoices(s.year, near);
   if(!ch) return null;
   return Q({
     cat:"楽曲", group:s.g, tag:"発売年", src:{song:s},
@@ -638,12 +729,13 @@ const GENERATORS = [
 
 { id:"title-track", cat:"楽曲", weight:8, gen(ctx){
   const g = rnd(uniq(ctx.songs.map(s=>s.g)));
-  const gs = ctx.songs.filter(s=>s.g===g);
-  const hits = gs.filter(s => s.type==="表題");
-  const miss = gs.filter(s => s.type && s.type!=="表題");
-  if(!hits.length || miss.length<3) return null;
+  const hits = ctx.songs.filter(s => s.g===g && s.type==="表題");
+  // 誤答は範囲を絞らない全曲から取る(やさしいモードでも成立させるため)
+  const missPool = ctx.allSongs.filter(s => s.g===g && s.type && s.type!=="表題");
+  if(!hits.length || missPool.length<3) return null;
   const s = rnd(hits);
-  const ch = makeChoices(s.title, shuf(miss).map(x=>x.title));
+  const miss = rank(ctx, missPool, x => x.cdBase === s.cdBase).map(x=>x.title);
+  const ch = makeChoices(s.title, miss);
   if(!ch) return null;
   return Q({
     cat:"楽曲", group:g, tag:"表題曲", src:{song:s},
@@ -656,16 +748,29 @@ const GENERATORS = [
 { id:"oldest", cat:"楽曲", weight:7, gen(ctx){
   const g = rnd(uniq(ctx.songs.map(s=>s.g)));
   const gs = ctx.songs.filter(s=>s.g===g && s.date);
-  const byDate = {};
-  gs.forEach(s => { if(!byDate[s.date]) byDate[s.date] = s; });
-  const picks = shuf(Object.values(byDate)).slice(0,4);
-  if(picks.length < 4) return null;
+  // 発売日が同じ曲・同名の曲は1つに絞る(答えが一意にならなくなるため)
+  const byDate = {}, seenTitle = new Set();
+  gs.forEach(s => {
+    if(byDate[s.date] || seenTitle.has(s.title)) return;
+    byDate[s.date] = s; seenTitle.add(s.title);
+  });
+  let list = Object.values(byDate);
+  if(list.length < 4) return null;
+  // むずかしい: 発売日が近い4曲 / それ以外: バラバラに選ぶ
+  let picks;
+  if(ctx.near){
+    list.sort((a,b)=>a.date.localeCompare(b.date));
+    const i = Math.floor(Math.random() * (list.length - 3));
+    picks = list.slice(i, i+4);
+  } else {
+    picks = shuf(list).slice(0,4);
+  }
   const sorted = picks.slice().sort((a,b)=>a.date.localeCompare(b.date));
   const ans = sorted[0];
   return Q({
     cat:"楽曲", group:g, tag:"リリース順", src:{songs:picks.map(s=>s.title)},
     text:`次の${g}の楽曲のうち、<span class="em">最も古い</span>のは?`,
-    choices:picks.map(s=>quote(s.title)), answer:quote(ans.title),
+    choices:shuf(picks).map(s=>quote(s.title)), answer:quote(ans.title),
     explain: sorted.map(s=>`${s.date}　${songLabel(s)}`).join("<br>")
   });
 }},
@@ -674,7 +779,8 @@ const GENERATORS = [
   const cands = ctx.songs.filter(s => solo(s.center));
   if(!cands.length) return null;
   const s = rnd(cands);
-  const wrong = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center).map(x => x.title);
+  const pool = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center);
+  const wrong = rank(ctx, pool, x => x.cdBase === s.cdBase).map(x => x.title);
   const ch = makeChoices(s.title, wrong);
   if(!ch) return null;
   return Q({
@@ -689,7 +795,9 @@ const GENERATORS = [
   const cands = ctx.members.filter(m => usable(m.period));
   if(!cands.length) return null;
   const m = rnd(cands);
-  const others = ctx.members.filter(x => x.g===m.g && usable(x.period) && x.period!==m.period).map(x => x.period);
+  const n = periodNum(m.period);
+  const pool = ctx.members.filter(x => x.g===m.g && usable(x.period) && x.period!==m.period);
+  const others = rank(ctx, pool, x => Math.abs(periodNum(x.period) - n) <= 1).map(x => x.period);
   const ch = makeChoices(m.period, others);
   if(!ch) return null;
   return Q({
@@ -704,7 +812,8 @@ const GENERATORS = [
   const cands = ctx.members.filter(m => usable(m.color));
   if(!cands.length) return null;
   const m = rnd(cands);
-  const others = ctx.members.filter(x => x.g===m.g && usable(x.color) && x.color!==m.color).map(x => x.color);
+  const pool = ctx.members.filter(x => x.g===m.g && usable(x.color) && x.color!==m.color);
+  const others = rank(ctx, pool, x => x.period === m.period).map(x => x.color);
   const ch = makeChoices(m.color, others);
   if(!ch) return null;
   return Q({
@@ -720,8 +829,10 @@ const GENERATORS = [
   if(!cands.length) return null;
   const m = rnd(cands);
   const mm = parseInt(m.birthday.slice(0,2),10);
-  const all = []; for(let i=1;i<=12;i++) if(i!==mm) all.push(i+"月");
-  const ch = makeChoices(mm+"月", shuf(all));
+  const wrap = n => ((n - 1 + 12) % 12) + 1;          // 1〜12に丸める
+  const offs = ctx.near ? [1,-1,2,-2] : [5,-5,6,4,-4];
+  const near = uniq(offs.map(d => wrap(mm + d)).filter(n => n !== mm)).map(n => n + "月");
+  const ch = makeChoices(mm+"月", near);
   if(!ch) return null;
   return Q({
     cat:"メンバー", group:m.g, tag:"誕生日", src:{member:m},
@@ -735,7 +846,9 @@ const GENERATORS = [
   const cands = ctx.members.filter(m => m.uniqueGroup);
   if(!cands.length) return null;
   const m = rnd(cands);
-  const ch = makeChoices(m.g, D.groups.filter(g => g!==m.g));
+  const sib = SIBLING_GROUPS[m.g] || [];
+  const pool = D.groups.filter(g => g!==m.g);
+  const ch = makeChoices(m.g, rank(ctx, pool, g => sib.includes(g)));
   if(!ch) return null;
   return Q({
     cat:"メンバー", group:m.g, tag:"所属グループ", src:{member:m},
@@ -748,11 +861,13 @@ const GENERATORS = [
 { id:"same-period", cat:"メンバー", weight:8, gen(ctx){
   const m = rnd(ctx.members.filter(x => usable(x.period)));
   if(!m) return null;
+  const n = periodNum(m.period);
   const same = ctx.members.filter(x => x.g===m.g && x.period===m.period && x.name!==m.name);
   const diff = ctx.members.filter(x => x.g===m.g && usable(x.period) && x.period!==m.period);
   if(!same.length || diff.length<3) return null;
   const ans = rnd(same);
-  const ch = makeChoices(ans.name, shuf(diff).map(x=>x.name));
+  const others = rank(ctx, diff, x => Math.abs(periodNum(x.period) - n) <= 1).map(x => x.name);
+  const ch = makeChoices(ans.name, others);
   if(!ch) return null;
   return Q({
     cat:"メンバー", group:m.g, tag:"同期", src:{member:m, other:ans.name},
@@ -764,34 +879,45 @@ const GENERATORS = [
 
 ];
 
-function buildContext(groups){
-  return {
-    songs:   D.songs.filter(s => groups.includes(s.g)),
-    members: D.members.filter(m => groups.includes(m.g)),
-  };
+function buildContext(groups, levelKey){
+  const lv = LEVELS[levelKey] || LEVELS.normal;
+  const allSongs   = D.songs.filter(s => groups.includes(s.g));
+  const allMembers = D.members.filter(m => groups.includes(m.g));
+  let songs   = allSongs.filter(lv.song);
+  let members = allMembers.filter(lv.member);
+  // 絞り込みで枯れてしまう場合は全体に戻す(問題が作れなくなるのを防ぐ)
+  if(songs.length   < 8) songs   = allSongs;
+  if(members.length < 8) members = allMembers;
+  return { songs, members, allSongs, allMembers,
+           near: lv.near, credits: lv.credits, level: levelKey };
 }
-function pickGenerators(cat){
+function pickGenerators(cat, levelKey){
+  const lv = LEVELS[levelKey] || LEVELS.normal;
   return GENERATORS.filter(g => {
+    if(lv.weights && lv.weights[g.id] === 0) return false;
     if(cat==="both") return true;
     if(cat==="song")   return g.cat==="楽曲" || g.cat==="両方";
     if(cat==="member") return g.cat==="メンバー" || g.cat==="両方";
     return true;
   });
 }
-function weightedPick(gens){
-  const total = gens.reduce((a,g)=>a+g.weight,0);
+function weightedPick(gens, levelKey){
+  const lv = LEVELS[levelKey] || LEVELS.normal;
+  const w = g => (lv.weights && lv.weights[g.id] != null) ? lv.weights[g.id] : g.weight;
+  const total = gens.reduce((a,g)=>a+w(g),0);
   let r = Math.random()*total;
-  for(const g of gens){ r -= g.weight; if(r<=0) return g; }
+  for(const g of gens){ r -= w(g); if(r<=0) return g; }
   return gens[gens.length-1];
 }
-function buildQuiz(groups, cat, count){
-  const ctx = buildContext(groups);
-  const gens = pickGenerators(cat);
+function buildQuiz(groups, cat, count, levelKey="normal"){
+  const ctx = buildContext(groups, levelKey);
+  const gens = pickGenerators(cat, levelKey);
+  if(!gens.length) return [];
   const out = [], seen = new Set();
   let guard = 0;
   while(out.length < count && guard < count*400){
     guard++;
-    const g = weightedPick(gens);
+    const g = weightedPick(gens, levelKey);
     let q = null;
     try { q = g.gen(ctx); } catch(e) { q = null; }
     if(!q || !q.choices || q.choices.length<4) continue;
@@ -800,6 +926,7 @@ function buildQuiz(groups, cat, count){
     if(seen.has(key)) continue;
     seen.add(key);
     q.genId = g.id;
+    q.level = levelKey;
     out.push(q);
   }
   return out;
@@ -821,7 +948,14 @@ function setView(v){
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => setView(b.dataset.view));
 
 /* ================= クイズ画面 ================= */
-const state = { groups: D.groups.slice(), cat:"both", count:10, quiz:[], idx:0, score:0, log:[] };
+const state = { groups: D.groups.slice(), cat:"both", level:"normal", count:10,
+                quiz:[], idx:0, score:0, log:[] };
+
+const LEVEL_NOTE = {
+  easy:   "表題曲と現役メンバーだけ。センターや誕生日など、分かりやすい問題が中心です。",
+  normal: "全843曲・288名から出題。15種類の問題がひととおり出ます。",
+  hard:   "編曲・振付・MV監督など細かいクレジット中心。誤答も同じCDや同じ期から選ばれます。",
+};
 
 function renderSetup(){
   const gc = $("groupChips"); gc.innerHTML = "";
@@ -847,6 +981,16 @@ function renderSetup(){
     b.onclick = () => { state.cat=v; renderSetup(); };
     cc.appendChild(b);
   });
+  const lc = $("levelChips"); lc.innerHTML = "";
+  [["easy","やさしい"],["normal","ふつう"],["hard","むずかしい"]].forEach(([v,label]) => {
+    const b = document.createElement("button");
+    b.className="chip"; b.textContent=label;
+    b.setAttribute("aria-pressed", state.level===v);
+    b.onclick = () => { state.level=v; renderSetup(); };
+    lc.appendChild(b);
+  });
+  $("levelNote").textContent = LEVEL_NOTE[state.level];
+
   const nc = $("countChips"); nc.innerHTML = "";
   [5,10,20,30].forEach(n => {
     const b = document.createElement("button");
@@ -860,9 +1004,9 @@ function renderSetup(){
 function updateStart(){
   const ok = state.groups.length>0;
   $("startBtn").disabled = !ok;
-  const ctx = buildContext(state.groups);
+  const ctx = buildContext(state.groups, state.level);
   $("setupNote").textContent = ok
-    ? `対象: 楽曲 ${ctx.songs.length}件 ／ メンバー ${ctx.members.length}名`
+    ? `出題対象: 楽曲 ${ctx.songs.length}件 ／ メンバー ${ctx.members.length}名`
     : "グループを1つ以上選んでください";
 }
 document.querySelectorAll("[data-all]").forEach(b => {
@@ -874,7 +1018,7 @@ function showQuizSection(sec){
   window.scrollTo({top:0});
 }
 function startQuiz(){
-  const quiz = buildQuiz(state.groups, state.cat, state.count);
+  const quiz = buildQuiz(state.groups, state.cat, state.count, state.level);
   if(!quiz.length){ alert("この条件では問題を作れませんでした。グループやジャンルを増やしてみてください。"); return; }
   state.quiz = quiz; state.idx = 0; state.score = 0; state.log = [];
   showQuizSection("quiz");
@@ -888,7 +1032,9 @@ function renderQuestion(){
   const col = GROUP_COLORS[q.group] || {c:"#26314f", f:"#fff"};
   $("qBadges").innerHTML =
     `<span class="badge" style="background:${col.c};color:${col.f}">${esc(q.group)}</span>` +
-    `<span class="badge tag">${esc(q.tag)}</span>`;
+    `<span class="badge tag">${esc(q.tag)}</span>` +
+    (state.level!=="normal"
+      ? `<span class="badge tag">${LEVELS[state.level].label}</span>` : "");
   $("qText").innerHTML = q.text;
   const box = $("qChoices"); box.innerHTML = "";
   q.choices.forEach((c,i) => {
@@ -1291,7 +1437,7 @@ function sendReport(q, kind, comment){
   const rec = {
     at: new Date().toISOString(),
     kind, comment,
-    group: q.group, tag: q.tag, genId: q.genId,
+    group: q.group, tag: q.tag, genId: q.genId, level: q.level || state.level,
     question: plain(q.text),
     choices: q.choices,
     answer: q.answer,

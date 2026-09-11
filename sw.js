@@ -4,7 +4,7 @@
           同時に裏で最新版を取りに行き、次に開いたときに新しい内容へ入れ替える。
   ※ https か localhost で開いたときだけ有効(ブラウザの仕様)。
 */
-const CACHE = "sakamichi-quiz-v1";
+const CACHE = "sakamichi-quiz-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -31,21 +31,38 @@ self.addEventListener("activate", e => {
   );
 });
 
+function save(req, res){
+  if (res && res.ok) {
+    const copy = res.clone();
+    caches.open(CACHE).then(c => c.put(req, copy));
+  }
+  return res;
+}
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;                    // 報告の送信などは素通し
-  if (new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
 
+  // 中身が変わっていくファイル(アプリ本体とデータ)は、まずネットを見に行く。
+  // こうしないと、更新しても次に開いたときまで古い版が表示されてしまう。
+  const isCore = req.mode === "navigate"
+              || url.pathname.endsWith("/index.html")
+              || url.pathname.endsWith("/quiz_data.js");
+
+  if (isCore) {
+    e.respondWith(
+      fetch(req)
+        .then(res => save(req, res))
+        .catch(() => caches.match(req)                 // オフラインなら保存版
+          .then(hit => hit || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  // アイコンなど変わらないものは保存版を優先(表示が速い)
   e.respondWith(
-    caches.match(req).then(hit => {
-      const fresh = fetch(req).then(res => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(req, copy));
-        }
-        return res;
-      }).catch(() => hit);                             // オフラインなら保存版
-      return hit || fresh;                             // 保存版があれば即表示、裏で更新
-    })
+    caches.match(req).then(hit => hit || fetch(req).then(res => save(req, res)))
   );
 });
