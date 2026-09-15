@@ -89,7 +89,6 @@
   .chip[data-color][aria-pressed="true"]{background:var(--c); border-color:var(--c); color:var(--cf);}
   .chip.sm{padding:5px 11px; font-size:12.5px;}
   .row-actions{display:flex; gap:8px; margin-top:10px;}
-  .lvnote{font-size:12px; color:var(--muted); line-height:1.65; margin:11px 0 0;}
   .mini{
     background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer;
     text-decoration:underline; padding:2px 0; font-family:inherit;
@@ -310,7 +309,6 @@
       <div class="card">
         <h2>難易度</h2>
         <div class="chips" id="levelChips"></div>
-        <p class="lvnote" id="levelNote"></p>
       </div>
       <div class="card">
         <h2>問題数</h2>
@@ -879,7 +877,11 @@ const GENERATORS = [
 
 ];
 
-function buildContext(groups, levelKey){
+/* ジャンル「作曲・編曲」で出すクレジットと、その問題の種類 */
+const CREDIT_CAT_KEYS = ["composer", "arranger"];
+const CREDIT_CAT_GENS = ["credit", "credit-which", "credit-not"];
+
+function buildContext(groups, levelKey, cat){
   const lv = LEVELS[levelKey] || LEVELS.normal;
   const allSongs   = D.songs.filter(s => groups.includes(s.g));
   const allMembers = D.members.filter(m => groups.includes(m.g));
@@ -888,8 +890,13 @@ function buildContext(groups, levelKey){
   // 絞り込みで枯れてしまう場合は全体に戻す(問題が作れなくなるのを防ぐ)
   if(songs.length   < 8) songs   = allSongs;
   if(members.length < 8) members = allMembers;
+
+  // ジャンルで明示的に選ばれている場合はそちらを優先する。
+  // (難易度は出題範囲と誤答の紛らわしさで効かせる。ここで絞ると
+  //  「作曲・編曲」を選んだのに編曲が出ない、ということが起きる)
+  const credits = (cat === "credit") ? CREDIT_CAT_KEYS : lv.credits;
   return { songs, members, allSongs, allMembers,
-           near: lv.near, credits: lv.credits, level: levelKey };
+           near: lv.near, credits, level: levelKey };
 }
 function pickGenerators(cat, levelKey){
   const lv = LEVELS[levelKey] || LEVELS.normal;
@@ -898,6 +905,7 @@ function pickGenerators(cat, levelKey){
     if(cat==="both") return true;
     if(cat==="song")   return g.cat==="楽曲" || g.cat==="両方";
     if(cat==="member") return g.cat==="メンバー" || g.cat==="両方";
+    if(cat==="credit") return CREDIT_CAT_GENS.includes(g.id);
     return true;
   });
 }
@@ -910,7 +918,7 @@ function weightedPick(gens, levelKey){
   return gens[gens.length-1];
 }
 function buildQuiz(groups, cat, count, levelKey="normal"){
-  const ctx = buildContext(groups, levelKey);
+  const ctx = buildContext(groups, levelKey, cat);
   const gens = pickGenerators(cat, levelKey);
   if(!gens.length) return [];
   const out = [], seen = new Set();
@@ -951,15 +959,18 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => setView(b
 const state = { groups: D.groups.slice(), cat:"both", level:"normal", count:10,
                 quiz:[], idx:0, score:0, log:[] };
 
-const LEVEL_NOTE = {
-  easy:   "表題曲と現役メンバーだけ。センターや誕生日など、分かりやすい問題が中心です。",
-  normal: "全843曲・288名から出題。15種類の問題がひととおり出ます。",
-  hard:   "編曲・振付・MV監督など細かいクレジット中心。誤答も同じCDや同じ期から選ばれます。",
-};
+/* 坂道グループとイコノイジョイの境目。ここでチップを折り返す */
+const GROUP_BREAK_BEFORE = "=LOVE";
 
 function renderSetup(){
   const gc = $("groupChips"); gc.innerHTML = "";
   D.groups.forEach(g => {
+    if(g === GROUP_BREAK_BEFORE){
+      // flexの行を強制的に折り返すための空要素
+      const br = document.createElement("span");
+      br.style.cssText = "flex-basis:100%; height:0;";
+      gc.appendChild(br);
+    }
     const b = document.createElement("button");
     const col = GROUP_COLORS[g] || {c:"#26314f", f:"#fff"};
     b.className = "chip"; b.textContent = g; b.dataset.color = "1";
@@ -974,7 +985,8 @@ function renderSetup(){
     gc.appendChild(b);
   });
   const cc = $("catChips"); cc.innerHTML = "";
-  [["both","楽曲＋メンバー"],["song","楽曲だけ"],["member","メンバーだけ"]].forEach(([v,label]) => {
+  [["both","楽曲＋メンバー"],["song","楽曲だけ"],["member","メンバーだけ"],
+   ["credit","作曲・編曲"]].forEach(([v,label]) => {
     const b = document.createElement("button");
     b.className="chip"; b.textContent=label;
     b.setAttribute("aria-pressed", state.cat===v);
@@ -989,7 +1001,6 @@ function renderSetup(){
     b.onclick = () => { state.level=v; renderSetup(); };
     lc.appendChild(b);
   });
-  $("levelNote").textContent = LEVEL_NOTE[state.level];
 
   const nc = $("countChips"); nc.innerHTML = "";
   [5,10,20,30].forEach(n => {
@@ -1004,7 +1015,7 @@ function renderSetup(){
 function updateStart(){
   const ok = state.groups.length>0;
   $("startBtn").disabled = !ok;
-  const ctx = buildContext(state.groups, state.level);
+  const ctx = buildContext(state.groups, state.level, state.cat);
   $("setupNote").textContent = ok
     ? `出題対象: 楽曲 ${ctx.songs.length}件 ／ メンバー ${ctx.members.length}名`
     : "グループを1つ以上選んでください";
