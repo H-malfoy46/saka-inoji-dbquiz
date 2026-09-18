@@ -161,6 +161,23 @@
   .review .mk.ok{color:var(--ok);} .review .mk.ng{color:var(--ng);}
   .review .ans{color:var(--muted); font-size:12px; margin-top:2px;}
 
+  /* ---------- 記録 ---------- */
+  .bestline{font-size:13px; color:var(--muted); margin-top:9px;}
+  .bestline.up{color:var(--ok); font-weight:800;}
+  .recrow{
+    display:flex; justify-content:space-between; gap:12px; align-items:baseline;
+    padding:10px 0; border-top:1px solid var(--line); font-size:13px;
+  }
+  .recrow:first-child{border-top:none; padding-top:2px;}
+  .recrow .k{color:var(--navy-soft); min-width:0;}
+  .recrow .v{font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .recbar{height:4px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:6px;}
+  .recbar > i{display:block; height:100%; background:var(--pink-deep);}
+  .recitem{padding:10px 0; border-top:1px solid var(--line); font-size:13px;}
+  .recitem:first-child{border-top:none; padding-top:2px;}
+  .recitem .top{display:flex; justify-content:space-between; gap:12px; align-items:baseline;}
+  .recitem .top .v{font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums;}
+
   /* ---------- DB ブラウザ ---------- */
   .toolbar{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
@@ -316,6 +333,7 @@
       </div>
       <button class="btn" id="startBtn">クイズをはじめる</button>
       <p id="setupNote" style="font-size:12px;color:var(--muted);text-align:center;margin:10px 0 0;"></p>
+      <button class="btn sub" id="recordsBtn" style="margin-top:12px;">これまでの記録</button>
     </section>
 
     <section id="quiz" class="hidden">
@@ -343,11 +361,31 @@
         <div class="score-big">
           <div class="n"><span id="rScore"></span><small id="rTotal"></small></div>
           <div class="msg" id="rMsg"></div>
+          <div class="bestline" id="rBest"></div>
         </div>
         <ul class="review" id="rReview"></ul>
       </div>
       <button class="btn" id="againBtn">同じ設定でもう一度</button>
       <button class="btn sub" id="backBtn" style="margin-top:8px;">設定を変える</button>
+    </section>
+
+    <section id="records" class="hidden">
+      <div class="card">
+        <div class="score-big">
+          <div class="n" id="recPct"></div>
+          <div class="msg" id="recSummary"></div>
+        </div>
+      </div>
+      <div class="card" id="recBestCard">
+        <h2>条件別ベスト</h2>
+        <div id="recBest"></div>
+      </div>
+      <div class="card" id="recTagCard">
+        <h2>問題の種類別</h2>
+        <div id="recTags"></div>
+      </div>
+      <button class="btn sub" id="recBack">戻る</button>
+      <button class="btn sub" id="recReset" style="margin-top:8px;">記録を消す</button>
     </section>
   </div>
 
@@ -1025,8 +1063,55 @@ document.querySelectorAll("[data-all]").forEach(b => {
 });
 
 function showQuizSection(sec){
-  ["setup","quiz","result"].forEach(s => $(s).classList.toggle("hidden", s!==sec));
+  ["setup","quiz","result","records"].forEach(s => $(s).classList.toggle("hidden", s!==sec));
   window.scrollTo({top:0});
+}
+
+/* ================= 記録(この端末の中だけに保存) ================= */
+const REC_KEY = "sakamichi_quiz_records";
+const CAT_LABELS = {both:"楽曲＋メンバー", song:"楽曲だけ", member:"メンバーだけ", credit:"作曲・編曲"};
+
+function loadRecords(){
+  try {
+    const r = JSON.parse(localStorage.getItem(REC_KEY) || "{}");
+    return { plays:0, questions:0, correct:0, best:{}, byTag:{}, ...r };
+  } catch(e) {
+    return { plays:0, questions:0, correct:0, best:{}, byTag:{} };
+  }
+}
+function saveRecords(r){
+  try { localStorage.setItem(REC_KEY, JSON.stringify(r)); } catch(e){}
+}
+const condKey   = () => `${state.cat}|${state.level}|${state.count}`;
+const condLabel = k => {
+  const [cat, lv, n] = k.split("|");
+  return `${CAT_LABELS[cat] || cat}／${(LEVELS[lv]||{}).label || lv}／${n}問`;
+};
+const pctOf = (c, n) => n ? Math.round(c / n * 100) : 0;
+
+/* 1回分の結果を記録に反映し、自己ベストを更新したかどうかを返す */
+function recordResult(){
+  const r = loadRecords();
+  const total = state.quiz.length, sc = state.score;
+  r.plays     += 1;
+  r.questions += total;
+  r.correct   += sc;
+
+  state.log.forEach(l => {
+    const t = l.q.tag;
+    if(!r.byTag[t]) r.byTag[t] = {c:0, n:0};
+    r.byTag[t].n += 1;
+    if(l.ok) r.byTag[t].c += 1;
+  });
+
+  const key = condKey();
+  const prev = r.best[key];
+  const pct  = pctOf(sc, total);
+  const updated = !prev || pct > prev.pct;
+  if(updated) r.best[key] = {pct, correct:sc, total, at:new Date().toISOString()};
+
+  saveRecords(r);
+  return {updated, prev, pct, rec:r};
 }
 function startQuiz(){
   const quiz = buildQuiz(state.groups, state.cat, state.count, state.level);
@@ -1091,6 +1176,52 @@ $("startBtn").onclick = startQuiz;
 $("againBtn").onclick = startQuiz;
 $("quitBtn").onclick  = () => showQuizSection("setup");
 $("backBtn").onclick  = () => showQuizSection("setup");
+$("recBack").onclick  = () => showQuizSection("setup");
+$("recordsBtn").onclick = () => { renderRecords(); showQuizSection("records"); };
+$("recReset").onclick = () => {
+  if(!confirm("これまでの記録をすべて消します。よろしいですか？")) return;
+  try { localStorage.removeItem(REC_KEY); } catch(e){}
+  renderRecords();
+};
+
+function renderRecords(){
+  const r = loadRecords();
+  const pct = pctOf(r.correct, r.questions);
+
+  $("recPct").innerHTML = r.plays
+    ? `${pct}<small>%</small>`
+    : `<span style="font-size:20px;color:var(--muted);">—</span>`;
+  $("recSummary").textContent = r.plays
+    ? `${r.plays}回プレイ　${r.correct}/${r.questions}問正解`
+    : "まだ記録がありません";
+  $("recReset").classList.toggle("hidden", !r.plays);
+
+  // 条件別ベスト(正答率の高い順)
+  const best = Object.entries(r.best).sort((a,b) => b[1].pct - a[1].pct);
+  $("recBestCard").classList.toggle("hidden", !best.length);
+  $("recBest").innerHTML = best.map(([k,v]) => `
+    <div class="recrow">
+      <span class="k">${esc(condLabel(k))}</span>
+      <span class="v">${v.correct}/${v.total}（${v.pct}%）</span>
+    </div>`).join("");
+
+  // 問題の種類別(正答率の低い順＝苦手が上に来る)
+  const tags = Object.entries(r.byTag)
+    .filter(([,v]) => v.n >= 3)
+    .sort((a,b) => pctOf(a[1].c,a[1].n) - pctOf(b[1].c,b[1].n));
+  $("recTagCard").classList.toggle("hidden", !tags.length);
+  $("recTags").innerHTML = tags.map(([t,v]) => {
+    const p = pctOf(v.c, v.n);
+    return `
+      <div class="recitem">
+        <div class="top">
+          <span class="k">${esc(t)}</span>
+          <span class="v">${v.c}/${v.n}（${p}%）</span>
+        </div>
+        <div class="recbar"><i style="width:${p}%"></i></div>
+      </div>`;
+  }).join("");
+}
 
 function renderResult(){
   const total = state.quiz.length, sc = state.score, pct = Math.round(sc/total*100);
@@ -1099,6 +1230,19 @@ function renderResult(){
   const msg = pct===100 ? "全問正解！完璧です" : pct>=80 ? "かなり詳しい" :
               pct>=60 ? "good、あと少し" : pct>=40 ? "まずまず" : "これから覚えていきましょう";
   $("rMsg").textContent = `正答率 ${pct}%　—　${msg}`;
+
+  const {updated, prev, rec} = recordResult();
+  const bl = $("rBest");
+  bl.className = "bestline" + (updated ? " up" : "");
+  if(updated){
+    bl.textContent = prev
+      ? `自己ベスト更新　${prev.correct}/${prev.total}（${prev.pct}%）→ ${sc}/${total}（${pct}%）`
+      : `自己ベスト　${sc}/${total}（${pct}%）`;
+  } else {
+    const b = rec.best[condKey()];
+    bl.textContent = `自己ベスト ${b.correct}/${b.total}（${b.pct}%）　通算 ${rec.plays}回・正答率 ${pctOf(rec.correct, rec.questions)}%`;
+  }
+
   const ul = $("rReview"); ul.innerHTML = "";
   state.log.forEach((l,i) => {
     const li = document.createElement("li");
