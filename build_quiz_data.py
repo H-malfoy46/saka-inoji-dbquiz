@@ -53,21 +53,34 @@ def is_single_person(v):
 
 
 def read_sheet(path, keys, ncols):
-    """各シートを読む。本表の下にある『参考』表は空行で切れるので、そこで読み終える。"""
+    """各シートを読む。
+
+    本表の下には『参考』の別表が付いていることがあるので、そこは読まない。
+    ただし1行空いただけで打ち切ると、セルが空のときにシートを丸ごと取りこぼすので、
+    「空行が続いたら終わり」「見出し行(曲名/名前)が出てきたら終わり」で判定する。
+    """
     wb = load_workbook(path, data_only=True)
     out = {}
     for name in wb.sheetnames:
         ws = wb[name]
         rows = []
+        blanks = 0
         for r in range(3, ws.max_row + 1):
-            first = ws.cell(row=r, column=2).value
-            if first is None or str(first).strip() == "":
-                break  # 本表おわり(以降は参考表)
-            rec = {}
-            for i, k in enumerate(keys):
-                v = ws.cell(row=r, column=2 + i).value
-                rec[k] = "" if v is None else str(v).strip()
-            rows.append(rec)
+            vals = [ws.cell(row=r, column=2 + i).value for i in range(len(keys))]
+            texts = ["" if v is None else str(v).strip() for v in vals]
+
+            if not any(texts):                 # 完全な空行
+                blanks += 1
+                if blanks >= 2:
+                    break                      # 2行以上空いたら本表おわり
+                continue
+            if texts[0] in ("曲名", "名前"):    # 参考表の見出しに当たった
+                break
+            if texts[0].startswith("参考："):
+                break
+
+            blanks = 0
+            rows.append({k: texts[i] for i, k in enumerate(keys)})
         out[name] = rows
     return out
 
