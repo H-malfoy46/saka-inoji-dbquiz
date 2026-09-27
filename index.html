@@ -70,7 +70,7 @@
     font-size:10px; line-height:16px; vertical-align:1px;
   }
 
-  main{padding-top:20px;}
+  main{padding-top:30px;}
 
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
@@ -251,6 +251,8 @@
   .more{margin-top:12px;}
 
   .empty{text-align:center; color:var(--muted); font-size:13px; padding:32px 0;}
+  .row.faded > button{opacity:.45;}
+  .row.faded.open > button{opacity:.75;}
 
   /* ---------- 一覧 / ランキング の切替 ---------- */
   .modebar{display:flex; gap:6px; margin:0 0 14px;}
@@ -292,6 +294,22 @@
   }
   .rkitems div{padding-top:7px;}
   .rkitems .cd{color:var(--muted); font-size:11.5px;}
+
+  /* ---------- 制作者の担当曲 ---------- */
+  .crsongs{padding:2px 14px 12px 19px; border-top:1px dashed var(--line-soft);}
+  .crsong{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:9px 0; border-top:1px solid var(--line-soft);
+  }
+  .crsong:first-child{border-top:none;}
+  .crsong .rl{
+    flex:none; width:74px; text-align:center; font-size:10.5px; font-weight:700;
+    color:var(--navy-soft); background:var(--line-soft); border-radius:4px;
+    padding:3px 4px; line-height:1.4;
+  }
+  .crsong .body{flex:1; min-width:0;}
+  .crsong .ti{display:block; font-size:13.5px; font-weight:700; line-height:1.45;}
+  .crsong .mt{display:block; font-size:11.5px; color:var(--muted); margin-top:2px;}
 
   /* ---------- モーダル ---------- */
   .overlay{
@@ -335,14 +353,19 @@
     font-size:13px; font-weight:700; z-index:80;
   }
   footer{text-align:center; font-size:11.5px; color:var(--muted); padding:14px 0 0; line-height:1.7;}
+  footer .notice{
+    border:1px solid var(--line); border-radius:7px; background:var(--card);
+    padding:11px 13px; margin-bottom:10px; text-align:left; color:var(--navy-soft);
+  }
+  footer .notice b{color:var(--navy);}
 </style>
 </head>
 <body>
 
 <header>
   <div class="inner">
-    <h1>坂道 × イコノイジョイ</h1>
-    <p>楽曲843件・メンバー288名のデータベース</p>
+    <h1>坂道 × イコノイジョイ DB</h1>
+    <p>坂道グループ(乃木坂46・櫻坂46(欅坂46)・日向坂46(けやき坂46))と指原グループ(=LOVE・≠ME・≒JOY)のデータベース</p>
     <nav>
       <button data-view="quiz"    aria-current="true">クイズ</button>
       <button data-view="songs">楽曲</button>
@@ -698,13 +721,16 @@ const CREDITS = [
 const creditsOf = ctx =>
   ctx.credits ? CREDITS.filter(c => ctx.credits.includes(c.key)) : CREDITS;
 
+/* センター問題に使える曲か。単独センターで、かつ出題対象外の人でないこと */
+const centerOK = (ctx, s) => solo(s.center) && !ctx.excluded.has(s.center);
+
 const GENERATORS = [
 
 { id:"center", cat:"楽曲", weight:14, gen(ctx){
-  const cands = ctx.songs.filter(s => solo(s.center));
+  const cands = ctx.songs.filter(s => centerOK(ctx, s));
   if(!cands.length) return null;
   const s = rnd(cands);
-  const pool = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center);
+  const pool = ctx.songs.filter(x => x.g===s.g && centerOK(ctx, x) && x.center!==s.center);
   const others = rank(ctx, pool, x => x.cdBase === s.cdBase).map(x => x.center);
   const ch = makeChoices(s.center, others);
   if(!ch) return null;
@@ -879,10 +905,10 @@ const GENERATORS = [
 }},
 
 { id:"member-center-song", cat:"両方", weight:9, gen(ctx){
-  const cands = ctx.songs.filter(s => solo(s.center));
+  const cands = ctx.songs.filter(s => centerOK(ctx, s));
   if(!cands.length) return null;
   const s = rnd(cands);
-  const pool = ctx.songs.filter(x => x.g===s.g && solo(x.center) && x.center!==s.center);
+  const pool = ctx.songs.filter(x => x.g===s.g && centerOK(ctx, x) && x.center!==s.center);
   const wrong = rank(ctx, pool, x => x.cdBase === s.cdBase).map(x => x.title);
   const ch = makeChoices(s.title, wrong);
   if(!ch) return null;
@@ -989,7 +1015,8 @@ const CREDIT_CAT_GENS = ["credit", "credit-which", "credit-not"];
 function buildContext(groups, levelKey, cat){
   const lv = LEVELS[levelKey] || LEVELS.normal;
   const allSongs   = D.songs.filter(s => groups.includes(s.g));
-  const allMembers = D.members.filter(m => groups.includes(m.g));
+  // 2014年までに卒業した人は分かっていることが少ないので出題しない
+  const allMembers = D.members.filter(m => groups.includes(m.g) && !isEarlyGrad(m));
   let songs   = allSongs.filter(lv.song);
   let members = allMembers.filter(lv.member);
   // 絞り込みで枯れてしまう場合は全体に戻す(問題が作れなくなるのを防ぐ)
@@ -1000,7 +1027,10 @@ function buildContext(groups, levelKey, cat){
   // (難易度は出題範囲と誤答の紛らわしさで効かせる。ここで絞ると
   //  「作曲・編曲」を選んだのに編曲が出ない、ということが起きる)
   const credits = (cat === "credit") ? CREDIT_CAT_KEYS : lv.credits;
-  return { songs, members, allSongs, allMembers,
+  // 2014年までに卒業した人は、曲のセンターとしても出題しない
+  const excluded = new Set(D.members.filter(isEarlyGrad).map(m => m.name));
+
+  return { songs, members, allSongs, allMembers, excluded,
            near: lv.near, credits, level: levelKey };
 }
 function pickGenerators(cat, levelKey){
@@ -1062,34 +1092,48 @@ function setView(v){
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => setView(b.dataset.view));
 
 /* ================= クイズ画面 ================= */
-const state = { groups: D.groups.slice(), cat:"both", level:"normal", count:10,
+const state = { groups: new Set(D.groups), cat:"both", level:"normal", count:10,
                 quiz:[], idx:0, score:0, log:[] };
 
 /* 坂道グループとイコノイジョイの境目。ここでチップを折り返す */
 const GROUP_BREAK_BEFORE = "=LOVE";
 
-function renderSetup(){
-  const gc = $("groupChips"); gc.innerHTML = "";
+/* グループの選択チップを作る。全タブで同じ挙動にするためここにまとめてある。
+   全部選ばれている状態で1つ押したときは「そのグループだけ」に絞る。
+   (全部入りから1つに絞りたい場面が多く、7回押させるのは手間なので) */
+function makeGroupChips(box, sel, onChange, small){
+  box.innerHTML = "";
+  const paint = () => [...box.children].forEach(b => {
+    if(b.dataset.g) b.setAttribute("aria-pressed", sel.has(b.dataset.g));
+  });
   D.groups.forEach(g => {
     if(g === GROUP_BREAK_BEFORE){
-      // flexの行を強制的に折り返すための空要素
-      const br = document.createElement("span");
+      const br = document.createElement("span");      // flexの行を折り返すための空要素
       br.style.cssText = "flex-basis:100%; height:0;";
-      gc.appendChild(br);
+      box.appendChild(br);
     }
-    const b = document.createElement("button");
     const col = GROUP_COLORS[g] || {c:"#26314f", f:"#fff"};
-    b.className = "chip"; b.textContent = g; b.dataset.color = "1";
-    b.style.setProperty("--c", col.c); b.style.setProperty("--cf", col.f);
-    b.setAttribute("aria-pressed", state.groups.includes(g));
+    const b = document.createElement("button");
+    b.className = "chip" + (small ? " sm" : "");
+    b.textContent = g;
+    b.dataset.color = "1";
+    b.dataset.g = g;
+    b.style.setProperty("--c", col.c);
+    b.style.setProperty("--cf", col.f);
     b.onclick = () => {
-      const i = state.groups.indexOf(g);
-      if(i>=0) state.groups.splice(i,1); else state.groups.push(g);
-      b.setAttribute("aria-pressed", state.groups.includes(g));
-      updateStart();
+      if(sel.size === D.groups.length){ sel.clear(); sel.add(g); }   // 全選択 → これだけ
+      else if(sel.has(g))              { sel.delete(g); }
+      else                             { sel.add(g); }
+      paint();
+      onChange();
     };
-    gc.appendChild(b);
+    box.appendChild(b);
   });
+  paint();
+}
+
+function renderSetup(){
+  makeGroupChips($("groupChips"), state.groups, updateStart);
   const cc = $("catChips"); cc.innerHTML = "";
   [["both","楽曲＋メンバー"],["song","楽曲だけ"],["member","メンバーだけ"],
    ["credit","作曲・編曲"]].forEach(([v,label]) => {
@@ -1119,15 +1163,18 @@ function renderSetup(){
   updateStart();
 }
 function updateStart(){
-  const ok = state.groups.length>0;
+  const ok = state.groups.size>0;
   $("startBtn").disabled = !ok;
-  const ctx = buildContext(state.groups, state.level, state.cat);
+  const ctx = buildContext([...state.groups], state.level, state.cat);
   $("setupNote").textContent = ok
     ? `出題対象: 楽曲 ${ctx.songs.length}件 ／ メンバー ${ctx.members.length}名`
     : "グループを1つ以上選んでください";
 }
 document.querySelectorAll("[data-all]").forEach(b => {
-  b.onclick = () => { state.groups = b.dataset.all==="1" ? D.groups.slice() : []; renderSetup(); };
+  b.onclick = () => {
+    state.groups = b.dataset.all==="1" ? new Set(D.groups) : new Set();
+    renderSetup();
+  };
 });
 
 function showQuizSection(sec){
@@ -1182,7 +1229,7 @@ function recordResult(){
   return {updated, prev, pct, rec:r};
 }
 function startQuiz(){
-  const quiz = buildQuiz(state.groups, state.cat, state.count, state.level);
+  const quiz = buildQuiz([...state.groups], state.cat, state.count, state.level);
   if(!quiz.length){ alert("この条件では問題を作れませんでした。グループやジャンルを増やしてみてください。"); return; }
   state.quiz = quiz; state.idx = 0; state.score = 0; state.log = [];
   showQuizSection("quiz");
@@ -1404,7 +1451,6 @@ function songDetailHTML(s){
     ${f("振付", s.choreographer)}${f("MV監督", s.director)}
     ${f("センター", s.center)}${f("参加メンバー", s.members)}
     ${f("種類", s.type)}${f("備考", s.notes)}
-    ${f("情報源", s.sources, "src")}
   </dl></div>`;
 }
 function renderSongs(){
@@ -1420,20 +1466,8 @@ function renderSongs(){
 }
 function initSongs(){
   songsInit = true;
-  const gc = $("songGroups");
-  D.groups.forEach(g => {
-    const b = document.createElement("button");
-    const col = GROUP_COLORS[g];
-    b.className="chip sm"; b.textContent=g; b.dataset.color="1";
-    b.style.setProperty("--c",col.c); b.style.setProperty("--cf",col.f);
-    b.setAttribute("aria-pressed","true");
-    b.onclick = () => {
-      songState.groups.has(g) ? songState.groups.delete(g) : songState.groups.add(g);
-      b.setAttribute("aria-pressed", songState.groups.has(g));
-      songState.limit=60; renderSongs();
-    };
-    gc.appendChild(b);
-  });
+  makeGroupChips($("songGroups"), songState.groups,
+                 () => { songState.limit = 60; renderSongs(); }, true);
   const tc = $("songTypes");
   SONG_TYPES.forEach(t => {
     const b = document.createElement("button");
@@ -1473,6 +1507,14 @@ let memInit = false;
 
 const statusOf = m => String(m.status||"").includes("卒") ? "卒業" : "現役";
 function periodNum(p){ const m=String(p||"").match(/(\d+)/); return m?+m[1]:999; }
+
+/* 2014年までに卒業した人。在籍が短く分かっていることも少ないので、
+   一覧では薄く表示し、クイズの出題対象からも外す。 */
+function isEarlyGrad(m){
+  const t = String(m.tenure || "").match(/～\s*(\d{4})\//);
+  return !!t && t[1] <= "2014";
+}
+
 function memMatches(m){
   if(!memState.groups.has(m.g)) return false;
   if(!memState.status.has(statusOf(m))) return false;
@@ -1499,7 +1541,7 @@ function memRowHTML(m, i){
   const color = usable(m.color)
     ? `<span class="t3">${colorSwatches(m.color)}${esc(m.color)}</span>` : "";
   return `
-  <div class="row" data-kind="mem" data-i="${i}">
+  <div class="row${isEarlyGrad(m) ? " faded" : ""}" data-kind="mem" data-i="${i}">
     <button type="button">
       <span class="gbar" style="background:${col.c}"></span>
       <span class="body">
@@ -1516,7 +1558,7 @@ function memDetailHTML(m){
     v && String(v).trim() && String(v).trim()!=="-"
       ? `<dt>${label}</dt><dd class="${BAD.test(v)?"warn":""}">${esc(v)}</dd>` : "";
   return `<div class="detail"><dl>
-    ${f("よみ", m.yomi)}${f("期", m.period)}${f("在籍", m.status)}
+    ${f("読み", m.yomi)}${f("期", m.period)}${f("在籍", m.status)}
     ${f("在籍期間", m.tenure)}${f("誕生日", m.birthday)}
     ${usable(m.color) ? `<dt>カラー</dt><dd>${colorSwatches(m.color)}${esc(m.color)}</dd>`
                       : f("カラー", m.color)}
@@ -1536,20 +1578,8 @@ function renderMembers(){
 }
 function initMembers(){
   memInit = true;
-  const gc = $("memGroups");
-  D.groups.forEach(g => {
-    const b=document.createElement("button");
-    const col=GROUP_COLORS[g];
-    b.className="chip sm"; b.textContent=g; b.dataset.color="1";
-    b.style.setProperty("--c",col.c); b.style.setProperty("--cf",col.f);
-    b.setAttribute("aria-pressed","true");
-    b.onclick=()=>{
-      memState.groups.has(g)?memState.groups.delete(g):memState.groups.add(g);
-      b.setAttribute("aria-pressed", memState.groups.has(g));
-      memState.limit=60; renderMembers();
-    };
-    gc.appendChild(b);
-  });
+  makeGroupChips($("memGroups"), memState.groups,
+                 () => { memState.limit = 60; renderMembers(); }, true);
   const stc = $("memStatus");
   ["現役","卒業"].forEach(s=>{
     const b=document.createElement("button");
@@ -1563,7 +1593,7 @@ function initMembers(){
     stc.appendChild(b);
   });
   const sc = $("memSort");
-  [["period","グループ→期→五十音（Excel順）"],["name","五十音順"],["birth","誕生日順"]].forEach(([v,l])=>{
+  [["period","デフォルト"],["name","五十音順"],["birth","誕生日順"]].forEach(([v,l])=>{
     const b=document.createElement("button");
     b.className="chip sm"; b.textContent=l;
     b.setAttribute("aria-pressed", memState.sort===v);
@@ -1768,20 +1798,8 @@ function buildRankPane(pane, rankIds){
     kc.appendChild(b);
   });
 
-  const gc = el("groups");
-  D.groups.forEach(g => {
-    const col = GROUP_COLORS[g];
-    const b = document.createElement("button");
-    b.className = "chip sm"; b.textContent = g; b.dataset.color = "1";
-    b.style.setProperty("--c", col.c); b.style.setProperty("--cf", col.f);
-    b.setAttribute("aria-pressed", "true");
-    b.onclick = () => {
-      state.groups.has(g) ? state.groups.delete(g) : state.groups.add(g);
-      b.setAttribute("aria-pressed", state.groups.has(g));
-      state.limit = 30; render();
-    };
-    gc.appendChild(b);
-  });
+  makeGroupChips(el("groups"), state.groups,
+                 () => { state.limit = 30; render(); }, true);
 
   moreEl.onclick = () => { state.limit += 30; render(); };
   rowsEl.addEventListener("click", ev => {
@@ -1814,7 +1832,8 @@ const crState = { q:"", roles:new Set(["composer","arranger"]),
                   groups:new Set(D.groups), limit:60 };
 let crInit = false;
 
-/* 制作者ごとに、担当した役割と曲をまとめる */
+/* 制作者ごとに担当曲をまとめる。
+   同じ曲で作曲と編曲の両方を担当していれば1行にまとめ、「作曲・編曲」と出す。 */
 function buildCreators(){
   const map = new Map();
   for(const s of D.songs){
@@ -1824,15 +1843,25 @@ function buildCreators(){
       for(const raw of splitPeople(s[role.key])){
         const k = baseKey(raw);
         if(!k) continue;
-        if(!map.has(k)) map.set(k, {name: cleanName(raw), roles:{}, n:0, items:[]});
+        if(!map.has(k)) map.set(k, {name: cleanName(raw), roles:{}, songs: new Map()});
         const e = map.get(k);
         e.roles[role.label] = (e.roles[role.label] || 0) + 1;
-        e.n += 1;
-        if(e.items.length < 80) e.items.push(`${role.label}／${bare(s.title)}／${s.g}／${s.cd}`);
+
+        const sk = `${s.g}|${s.title}|${s.cd}`;
+        if(!e.songs.has(sk)){
+          e.songs.set(sk, {title: bare(s.title), g: s.g, cd: s.cd,
+                           date: s.date || "", roles: []});
+        }
+        e.songs.get(sk).roles.push(role.label);
       }
     }
   }
-  let list = [...map.values()];
+  let list = [...map.values()].map(e => ({
+    name: e.name,
+    roles: e.roles,
+    n: e.songs.size,                       // 曲数(役割の延べ数ではなく実際の曲数)
+    items: [...e.songs.values()].sort((a,b) => a.date.localeCompare(b.date)),
+  }));
   const q = crState.q.trim().toLowerCase();
   if(q) list = list.filter(e => e.name.toLowerCase().includes(q));
   return list.sort((a,b) => b.n - a.n || a.name.localeCompare(b.name, "ja"));
@@ -1850,8 +1879,9 @@ function renderCreators(){
         <button type="button">
           <span class="gbar" style="background:var(--line)"></span>
           <span class="body">
-            <span class="t1">${esc(e.name)}${roles}</span>
-            <span class="t2">計 ${e.n}曲</span>
+            <span class="t1">${esc(e.name)}</span>
+            <span class="t2">${esc(String(e.n))}曲</span>
+            <span class="t3">${roles}</span>
           </span>
           <span class="chev">▶</span>
         </button>
@@ -1860,6 +1890,22 @@ function renderCreators(){
   $("crRows")._list = shown;
   $("crMore").classList.toggle("hidden", list.length <= crState.limit);
   $("crMore").textContent = `さらに表示（残り ${Math.max(0, list.length - crState.limit)}人）`;
+}
+
+/* 担当曲の一覧。役割 → 曲名 → グループ/CD の順に並べる */
+function creatorSongsHTML(e){
+  const order = ROLES.map(r => r.label);
+  return `<div class="crsongs">` + e.items.map(s => {
+    const roles = order.filter(r => s.roles.includes(r)).join("・");
+    return `
+      <div class="crsong">
+        <span class="rl">${esc(roles)}</span>
+        <span class="body">
+          <span class="ti">${esc(s.title)}</span>
+          <span class="mt">${esc(s.g)}　${esc(s.cd)}</span>
+        </span>
+      </div>`;
+  }).join("") + `</div>`;
 }
 
 function initCreators(){
@@ -1876,34 +1922,13 @@ function initCreators(){
     };
     rc.appendChild(b);
   });
-  const gc = $("crGroups");
-  D.groups.forEach(g => {
-    const col = GROUP_COLORS[g];
-    const b = document.createElement("button");
-    b.className = "chip sm"; b.textContent = g; b.dataset.color = "1";
-    b.style.setProperty("--c", col.c); b.style.setProperty("--cf", col.f);
-    b.setAttribute("aria-pressed", "true");
-    b.onclick = () => {
-      crState.groups.has(g) ? crState.groups.delete(g) : crState.groups.add(g);
-      b.setAttribute("aria-pressed", crState.groups.has(g));
-      crState.limit = 60; renderCreators();
-    };
-    gc.appendChild(b);
-  });
+  makeGroupChips($("crGroups"), crState.groups,
+                 () => { crState.limit = 60; renderCreators(); }, true);
   $("crSearch").oninput = e => { crState.q = e.target.value; crState.limit = 60; renderCreators(); };
   $("crMore").onclick = () => { crState.limit += 60; renderCreators(); };
   $("crRows").addEventListener("click", e => {
     const row = e.target.closest(".row"); if(!row) return;
-    toggleRow(row, () => {
-      const e2 = $("crRows")._list[+row.dataset.i];
-      return `<div class="rkitems">` +
-        e2.items.map(t => {
-          const p = String(t).split("／");
-          return `<div>${esc(p[1])}<span class="cd">　${esc(p[0])}／${esc(p.slice(2).join("／"))}</span></div>`;
-        }).join("") +
-        (e2.n > e2.items.length ? `<div class="cd">ほか ${e2.n - e2.items.length}曲</div>` : "") +
-        `</div>`;
-    });
+    toggleRow(row, () => creatorSongsHTML($("crRows")._list[+row.dataset.i]));
   });
   renderCreators();
 }
@@ -2056,8 +2081,11 @@ renderSetup();
 initModebars();
 updateDot();
 $("dataNote").innerHTML =
-  `収録データ: 楽曲 ${D.songs.length}件 ／ メンバー ${D.members.length}名<br>` +
-  `【要確認】の項目はクイズの出題から自動的に除外されます（DB表示では赤字で表示）`;
+  `<div class="notice">` +
+    `このサイトは<b>非公式</b>です。各グループおよび関係各社とは一切関係ありません。<br>` +
+    `収録データは<b>AIが収集したもの</b>で、誤りが含まれる場合があります。` +
+  `</div>` +
+  `収録データ: 楽曲 ${D.songs.length}件 ／ メンバー ${D.members.length}名`;
 
 /* オフラインでも遊べるようにする(https / localhost のときだけ有効) */
 if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")){
