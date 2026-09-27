@@ -15,20 +15,20 @@
 <meta name="apple-mobile-web-app-title" content="坂道クイズ">
 <style>
   :root{
-    --navy:#26314f;
-    --navy-soft:#3d4a6b;
-    --pink:#f4b6c2;
-    --pink-deep:#e2809a;
-    --bg:#faf7f8;
+    --navy:#232b3d;        /* 文字と主要面。青みを少し抜いた濃紺 */
+    --navy-soft:#4a5468;
+    --pink:#e7c3cb;        /* マーカー用。彩度を落とした桜色 */
+    --pink-deep:#a8556a;   /* 差し色。くすませて落ち着かせる */
+    --bg:#f5f4f2;          /* 紙に近い無彩色。桜色寄りをやめる */
     --card:#ffffff;
-    --line:#e8e2e5;
-    --line-soft:#f1ecee;
-    --muted:#8b8590;
-    --ok:#2e9e6b;
-    --ok-bg:#e8f6ef;
-    --ng:#d9534f;
-    --ng-bg:#fdecec;
-    --radius:16px;
+    --line:#e2e0db;
+    --line-soft:#eeece8;
+    --muted:#8b8a86;
+    --ok:#2f7a55;
+    --ok-bg:#eaf2ed;
+    --ng:#b0453f;
+    --ng-bg:#f7ebea;
+    --radius:10px;         /* 角を浅くして丸みの強さを抑える */
   }
   *{box-sizing:border-box;}
   body{
@@ -44,7 +44,8 @@
 
   /* ---------- ヘッダー / ナビ ---------- */
   header{
-    background:linear-gradient(135deg,var(--navy) 0%,#3a2d44 60%,var(--pink-deep) 140%);
+    background:var(--navy);
+    border-bottom:3px solid var(--pink-deep);
     color:#fff;
     /* ホーム画面から起動したとき、iPhoneの時計表示と重ならないように余白を足す */
     padding:calc(22px + env(safe-area-inset-top, 0px)) 16px 0;
@@ -56,10 +57,11 @@
   nav{display:flex; gap:4px; margin-top:14px;}
   nav button{
     flex:1; background:none; border:none; color:#fff; opacity:.62;
-    font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
-    padding:10px 4px 11px; border-bottom:2.5px solid transparent; transition:.15s;
-    position:relative;
+    font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;
+    padding:10px 2px 11px; border-bottom:2.5px solid transparent; transition:.15s;
+    position:relative; white-space:nowrap; min-width:0;
   }
+  @media(min-width:420px){ nav button{font-size:13px; padding:10px 4px 11px;} }
   nav button:hover{opacity:.85;}
   nav button[aria-current="true"]{opacity:1; border-bottom-color:var(--pink);}
   nav .dot{
@@ -95,7 +97,7 @@
   }
 
   .btn{
-    width:100%; border:none; border-radius:12px; padding:15px;
+    width:100%; border:none; border-radius:8px; padding:15px;
     background:var(--navy); color:#fff; font-size:16px; font-weight:700;
     cursor:pointer; font-family:inherit; letter-spacing:.05em; transition:.15s;
   }
@@ -118,11 +120,14 @@
   }
   .badge.tag{background:#f0ecee; color:var(--muted);}
   .qtext{font-size:18px; line-height:1.6; font-weight:700; margin:0 0 18px;}
-  .qtext .em{background:linear-gradient(transparent 62%, var(--pink) 62%); padding:0 1px;}
+  .qtext .em{
+    padding-bottom:1px;
+    border-bottom:2px solid var(--pink-deep);
+  }
   .choices{display:flex; flex-direction:column; gap:9px;}
   .choice{
     text-align:left; border:1.5px solid var(--line); background:#fff; color:var(--navy);
-    border-radius:12px; padding:14px 15px; font-size:15px; cursor:pointer;
+    border-radius:8px; padding:14px 15px; font-size:15px; cursor:pointer;
     font-family:inherit; font-weight:600; line-height:1.45; transition:.12s;
     display:flex; gap:11px; align-items:flex-start;
   }
@@ -141,7 +146,7 @@
   .feedback{margin-top:16px;}
   .verdict{font-size:15px; font-weight:800; margin-bottom:8px;}
   .verdict.ok{color:var(--ok);} .verdict.ng{color:var(--ng);}
-  .explain{font-size:13px; line-height:1.7; color:var(--navy-soft); background:#f7f5f6; border-radius:10px; padding:12px 14px;}
+  .explain{font-size:13px; line-height:1.7; color:var(--navy-soft); background:#f7f5f6; border-radius:7px; padding:12px 14px;}
   .explain b{color:var(--navy);}
   .report-link{
     display:block; margin:11px auto 0; background:none; border:none;
@@ -184,7 +189,7 @@
     padding:14px; margin-bottom:14px;
   }
   .search{
-    width:100%; border:1.5px solid var(--line); border-radius:11px; padding:12px 13px;
+    width:100%; border:1.5px solid var(--line); border-radius:8px; padding:12px 13px;
     font-size:15px; font-family:inherit; color:var(--navy); background:#fff;
   }
   .search:focus{outline:none; border-color:var(--pink-deep);}
@@ -197,7 +202,7 @@
 
   .rows{display:flex; flex-direction:column; gap:8px;}
   .row{
-    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    background:var(--card); border:1px solid var(--line); border-radius:8px;
     overflow:hidden; transition:.15s;
   }
   .row:hover{border-color:var(--pink);}
@@ -241,11 +246,52 @@
   .swatches{display:inline-flex; gap:4px; vertical-align:-2px; margin-right:6px;}
   .sw{
     width:13px; height:13px; border-radius:50%; display:inline-block;
-    border:1px solid rgba(0,0,0,.12); box-shadow:inset 0 -1px 2px rgba(0,0,0,.06);
+    border:1px solid rgba(0,0,0,.14);
   }
   .more{margin-top:12px;}
 
   .empty{text-align:center; color:var(--muted); font-size:13px; padding:32px 0;}
+
+  /* ---------- 一覧 / ランキング の切替 ---------- */
+  .modebar{display:flex; gap:6px; margin:0 0 14px;}
+  .modebar button{
+    flex:1; border:1.5px solid var(--line); background:#fff; color:var(--muted);
+    border-radius:7px; padding:9px 4px; font-family:inherit; font-size:13.5px;
+    font-weight:700; cursor:pointer; transition:.12s;
+  }
+  .modebar button[aria-pressed="true"]{
+    background:var(--navy); border-color:var(--navy); color:#fff;
+  }
+
+  /* ---------- ランキング ---------- */
+  .rk{display:flex; gap:11px; align-items:center; padding:12px 14px 12px 12px;}
+  .rk .no{
+    flex:none; width:26px; text-align:center; font-size:13px; font-weight:800;
+    color:var(--muted); font-variant-numeric:tabular-nums;
+  }
+  .rk .no.top{color:var(--pink-deep);}
+  .rk .body{flex:1; min-width:0;}
+  .rk .nm{
+    font-size:14.5px; font-weight:700; line-height:1.4;
+    display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;
+  }
+  .rk .sub{display:block; font-size:11.5px; color:var(--muted); margin-top:3px;}
+  .rk .bar{
+    display:block; height:5px; background:var(--line);
+    border-radius:99px; overflow:hidden; margin-top:6px;
+  }
+  .rk .bar > i{display:block; height:100%; background:var(--pink-deep); border-radius:99px;}
+  .rk .cnt{
+    flex:none; font-size:14px; font-weight:800; white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+  .rk .cnt small{font-size:11px; font-weight:700; color:var(--muted); margin-left:1px;}
+  .rkitems{
+    padding:2px 14px 14px 49px; border-top:1px dashed var(--line-soft);
+    font-size:12.5px; line-height:1.75; color:var(--navy-soft);
+  }
+  .rkitems div{padding-top:7px;}
+  .rkitems .cd{color:var(--muted); font-size:11.5px;}
 
   /* ---------- モーダル ---------- */
   .overlay{
@@ -254,25 +300,25 @@
   }
   @media(min-width:600px){ .overlay{align-items:center;} }
   .modal{
-    background:#fff; border-radius:18px; padding:20px; width:100%; max-width:520px;
+    background:#fff; border-radius:8px; padding:20px; width:100%; max-width:520px;
     max-height:86vh; overflow:auto;
   }
   .modal h3{margin:0 0 4px; font-size:16px;}
   .modal .sub{font-size:12px; color:var(--muted); margin:0 0 14px; line-height:1.6;}
   .modal .qbox{
-    background:#f7f5f6; border-radius:10px; padding:11px 13px; font-size:12.5px;
+    background:#f7f5f6; border-radius:7px; padding:11px 13px; font-size:12.5px;
     line-height:1.6; margin-bottom:14px; color:var(--navy-soft);
   }
   .modal label{display:block; font-size:11.5px; color:var(--muted); font-weight:700; margin:0 0 7px;}
   .modal textarea{
-    width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px;
+    width:100%; border:1.5px solid var(--line); border-radius:8px; padding:11px;
     font-size:14px; font-family:inherit; min-height:84px; resize:vertical; color:var(--navy);
   }
   .modal textarea:focus{outline:none; border-color:var(--pink-deep);}
   .modal .acts{display:flex; gap:8px; margin-top:16px;}
 
   .rep{
-    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    background:var(--card); border:1px solid var(--line); border-radius:8px;
     padding:13px 14px; margin-bottom:8px; font-size:13px; line-height:1.6;
   }
   .rep .meta{font-size:11px; color:var(--muted); margin-bottom:5px;}
@@ -285,8 +331,8 @@
 
   .toast{
     position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
-    background:var(--navy); color:#fff; padding:11px 20px; border-radius:99px;
-    font-size:13px; font-weight:700; z-index:80; box-shadow:0 6px 20px rgba(0,0,0,.2);
+    background:var(--navy); color:#fff; padding:11px 20px; border-radius:6px;
+    font-size:13px; font-weight:700; z-index:80;
   }
   footer{text-align:center; font-size:11.5px; color:var(--muted); padding:14px 0 0; line-height:1.7;}
 </style>
@@ -299,9 +345,9 @@
     <p>楽曲843件・メンバー288名のデータベース</p>
     <nav>
       <button data-view="quiz"    aria-current="true">クイズ</button>
-      <button data-view="songs">楽曲DB</button>
-      <button data-view="members">メンバーDB</button>
-      <button data-view="reports">報告<span class="dot hidden" id="repDot">0</span></button>
+      <button data-view="songs">楽曲</button>
+      <button data-view="members">メンバー</button>
+      <button data-view="creators">作曲・編曲</button>
     </nav>
   </div>
 </header>
@@ -389,66 +435,87 @@
     </section>
   </div>
 
-  <!-- ================= 楽曲DB ================= -->
+  <!-- ================= 楽曲 ================= -->
   <div id="view-songs" class="hidden">
-    <div class="toolbar">
-      <input class="search" id="songSearch" type="search"
-             placeholder="曲名・CD名・作曲者・センターなどで検索">
-      <div class="sec">
-        <span>グループ</span>
-        <div class="chips" id="songGroups"></div>
+    <div class="modebar" data-tab="songs"></div>
+
+    <div data-pane="songs-list">
+      <div class="toolbar">
+        <input class="search" id="songSearch" type="search"
+               placeholder="曲名・CD名・作曲者・センターなどで検索">
+        <div class="sec">
+          <span>グループ</span>
+          <div class="chips" id="songGroups"></div>
+        </div>
+        <div class="sec">
+          <span>種類</span>
+          <div class="chips" id="songTypes"></div>
+        </div>
+        <div class="sec">
+          <span>並び順</span>
+          <div class="chips" id="songSort"></div>
+        </div>
       </div>
-      <div class="sec">
-        <span>種類</span>
-        <div class="chips" id="songTypes"></div>
-      </div>
-      <div class="sec">
-        <span>並び順</span>
-        <div class="chips" id="songSort"></div>
-      </div>
+      <p class="count" id="songCount"></p>
+      <div class="rows" id="songRows"></div>
+      <button class="btn sub sm more hidden" id="songMore">さらに表示</button>
     </div>
-    <p class="count" id="songCount"></p>
-    <div class="rows" id="songRows"></div>
-    <button class="btn sub sm more hidden" id="songMore">さらに表示</button>
+
+    <div data-pane="songs-rank" class="hidden"></div>
   </div>
 
-  <!-- ================= メンバーDB ================= -->
+  <!-- ================= メンバー ================= -->
   <div id="view-members" class="hidden">
-    <div class="toolbar">
-      <input class="search" id="memSearch" type="search"
-             placeholder="名前・期・サイリウムカラーなどで検索">
-      <div class="sec">
-        <span>グループ</span>
-        <div class="chips" id="memGroups"></div>
+    <div class="modebar" data-tab="members"></div>
+
+    <div data-pane="members-list">
+      <div class="toolbar">
+        <input class="search" id="memSearch" type="search"
+               placeholder="名前・期・サイリウムカラーなどで検索">
+        <div class="sec">
+          <span>グループ</span>
+          <div class="chips" id="memGroups"></div>
+        </div>
+        <div class="sec">
+          <span>在籍</span>
+          <div class="chips" id="memStatus"></div>
+        </div>
+        <div class="sec">
+          <span>並び順</span>
+          <div class="chips" id="memSort"></div>
+        </div>
       </div>
-      <div class="sec">
-        <span>在籍</span>
-        <div class="chips" id="memStatus"></div>
-      </div>
-      <div class="sec">
-        <span>並び順</span>
-        <div class="chips" id="memSort"></div>
-      </div>
+      <p class="count" id="memCount"></p>
+      <div class="rows" id="memRows"></div>
+      <button class="btn sub sm more hidden" id="memMore">さらに表示</button>
     </div>
-    <p class="count" id="memCount"></p>
-    <div class="rows" id="memRows"></div>
-    <button class="btn sub sm more hidden" id="memMore">さらに表示</button>
+
+    <div data-pane="members-rank" class="hidden"></div>
   </div>
 
-  <!-- ================= 報告一覧 ================= -->
-  <div id="view-reports" class="hidden">
-    <div class="card">
-      <h2>問題の報告</h2>
-      <p style="font-size:13px;line-height:1.7;margin:0;color:var(--navy-soft);">
-        クイズの答えや選択肢がおかしいと思ったら、その問題の下にある
-        「この問題がおかしい？ 報告する」から報告できます。
-        報告はこの一覧にたまり、<b>まとめてコピー</b>して修正依頼に使えます。
-      </p>
+  <!-- ================= 作曲・編曲 ================= -->
+  <div id="view-creators" class="hidden">
+    <div class="modebar" data-tab="creators"></div>
+
+    <div data-pane="creators-list">
+      <div class="toolbar">
+        <input class="search" id="crSearch" type="search"
+               placeholder="名前で検索">
+        <div class="sec">
+          <span>担当</span>
+          <div class="chips" id="crRoles"></div>
+        </div>
+        <div class="sec">
+          <span>グループ</span>
+          <div class="chips" id="crGroups"></div>
+        </div>
+      </div>
+      <p class="count" id="crCount"></p>
+      <div class="rows" id="crRows"></div>
+      <button class="btn sub sm more hidden" id="crMore">さらに表示</button>
     </div>
-    <p class="count" id="repCount"></p>
-    <div id="repRows"></div>
-    <button class="btn sub sm" id="repCopy">報告をまとめてコピー</button>
-    <button class="btn sub sm" id="repClear" style="margin-top:8px;">報告をすべて削除</button>
+
+    <div data-pane="creators-rank" class="hidden"></div>
   </div>
 
   <footer id="dataNote"></footer>
@@ -982,14 +1049,15 @@ function buildQuiz(groups, cat, count, levelKey="normal"){
 let currentView = "quiz";
 function setView(v){
   currentView = v;
-  ["quiz","songs","members","reports"].forEach(x =>
+  ["quiz","songs","members","creators"].forEach(x =>
     $("view-"+x).classList.toggle("hidden", x!==v));
   document.querySelectorAll("nav button").forEach(b =>
     b.setAttribute("aria-current", b.dataset.view===v));
   window.scrollTo({top:0});
-  if(v==="songs"  && !songsInit)  initSongs();
-  if(v==="members"&& !memInit)    initMembers();
-  if(v==="reports") renderReports();
+  if(v==="songs"   && !songsInit) initSongs();
+  if(v==="members" && !memInit)   initMembers();
+  if(v==="creators"&& !crInit)    initCreators();
+  if(v!=="quiz") showPane(v);
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => setView(b.dataset.view));
 
@@ -1515,6 +1583,363 @@ function initMembers(){
   renderMembers();
 }
 
+/* ================= ランキング(データを集計したもの) ================= */
+
+/* 「秋元康、○○」のような併記を分解して1人ずつにする。
+   中黒(・)は「白石麻衣・西野七瀬」のような区切りにも、
+   「デレク・ターナー」のような名前の一部にも使われるので、
+   漢字を含むときだけ区切りとみなす。 */
+function splitPeople(v){
+  if(!usable(v)) return [];
+  const hasKanji = s => /[一-鿿]/.test(s);
+  const out = [];
+  for(const part of String(v).split(/[、，,／\/＆&＋+]/)){
+    if(part.includes("・") && hasKanji(part)) out.push(...part.split("・"));
+    else out.push(part);
+  }
+  return out
+    .map(s => s.trim())
+    .filter(s => s && !BAD.test(s) && !/^[-‐―–—ー]$/.test(s) && s[0] !== "(" && s[0] !== "（");
+}
+
+/* 在籍期間を日数にする。現役(終わりなし)は今日まで。読めないものは null */
+function tenureDays(t){
+  const m = String(t || "").match(/^(\d{4})\/(\d{2})\/(\d{2})\s*～\s*(?:(\d{4})\/(\d{2})\/(\d{2}))?\s*$/);
+  if(!m) return null;
+  const start = new Date(+m[1], +m[2]-1, +m[3]);
+  const end   = m[4] ? new Date(+m[4], +m[5]-1, +m[6]) : new Date();
+  const days  = Math.round((end - start) / 86400000);
+  return days >= 0 ? {days, ongoing: !m[4]} : null;
+}
+function daysLabel(d){
+  const y = Math.floor(d / 365.25);
+  const mo = Math.round((d - y * 365.25) / 30.44);
+  return y ? `${y}年${mo ? mo + "か月" : ""}` : `${mo}か月`;
+}
+
+const RANKINGS = [
+  {id:"center-title",  label:"表題センター", src:"song", field:"center",
+   only:s => s.type === "表題", unit:"曲"},
+  {id:"center-all",    label:"センター(全曲)", src:"song", field:"center", unit:"曲"},
+  {id:"composer-title",label:"作曲(表題)", src:"song", field:"composer",
+   only:s => s.type === "表題", unit:"曲"},
+  {id:"composer-all",  label:"作曲(全曲)", src:"song", field:"composer", unit:"曲"},
+  {id:"arranger",      label:"編曲", src:"song", field:"arranger", unit:"曲"},
+  {id:"lyricist",      label:"作詞", src:"song", field:"lyricist", unit:"曲"},
+  {id:"choreographer", label:"振付", src:"song", field:"choreographer", unit:"曲"},
+  {id:"director",      label:"MV監督", src:"song", field:"director", unit:"曲"},
+  {id:"year",          label:"年別リリース", src:"year", unit:"曲"},
+  {id:"group-songs",   label:"グループ別曲数", src:"group", unit:"曲"},
+  {id:"tenure",        label:"在籍の長さ", src:"tenure"},
+];
+
+/* どのタブにどのランキングを置くか */
+const RANK_SETS = {
+  songs:    ["year", "group-songs"],
+  members:  ["center-title", "center-all", "tenure"],
+  creators: ["composer-title", "composer-all", "arranger", "lyricist",
+             "choreographer", "director"],
+};
+
+/* カッコ書きを落として表示名にする。
+   データには「TAKAHIRO(単独ソース)」「LICO（ライブ）」のように
+   注記が付いたものが混ざっているため。空白は名前の一部なので残す。 */
+const cleanName = v => String(v).replace(/[(（].*$/, "").trim() || String(v).trim();
+
+/* 表記ゆれ(「TAKAHIRO」と「TAKAHIRO(単独ソース)」)を1つにまとめて数える */
+function tally(rows, keyOf, itemOf){
+  const map = new Map();
+  for(const row of rows){
+    for(const raw of keyOf(row)){
+      const k = baseKey(raw);
+      if(!k) continue;
+      if(!map.has(k)) map.set(k, {label: cleanName(raw), n: 0, items: []});
+      const e = map.get(k);
+      e.n += 1;
+      if(e.items.length < 60) e.items.push(itemOf(row));
+    }
+  }
+  return [...map.values()];
+}
+
+function computeRanking(kindId, groups){
+  const r = RANKINGS.find(x => x.id === kindId) || RANKINGS[0];
+
+  if(r.src === "tenure"){
+    const list = [];
+    for(const m of D.members){
+      if(!groups.includes(m.g)) continue;
+      const t = tenureDays(m.tenure);
+      if(!t) continue;
+      list.push({
+        label: m.name, n: t.days,
+        sub: `${m.g}　${m.period}${t.ongoing ? "　在籍中" : ""}`,
+        value: daysLabel(t.days),
+        items: [`${m.tenure}`],
+      });
+    }
+    return list.sort((a,b) => b.n - a.n);
+  }
+
+  const songs = D.songs.filter(s => groups.includes(s.g) && (!r.only || r.only(s)));
+
+  if(r.src === "year"){
+    const list = tally(songs, s => (s.year ? [s.year] : []),
+                       s => `${bare(s.title)}／${s.g}`);
+    return list
+      .map(e => ({...e, label: e.label + "年", value: `${e.n}${r.unit}`, sub: ""}))
+      .sort((a,b) => a.label.localeCompare(b.label));
+  }
+
+  if(r.src === "group"){
+    const list = tally(songs, s => [s.g], s => `${bare(s.title)}／${s.cd}`);
+    return list
+      .map(e => ({...e, value: `${e.n}${r.unit}`, sub: ""}))
+      .sort((a,b) => b.n - a.n);
+  }
+
+  const list = tally(songs, s => splitPeople(s[r.field]),
+                     s => `${bare(s.title)}／${s.g}／${s.cd}`);
+  return list
+    .map(e => ({...e, value: `${e.n}${r.unit}`, sub: ""}))
+    .sort((a,b) => b.n - a.n || a.label.localeCompare(b.label, "ja"));
+}
+
+/* タブごとにランキング画面を作る。同じ仕組みを3つのタブで使い回す */
+function buildRankPane(pane, rankIds){
+  const state = { kind: rankIds[0], groups: new Set(D.groups), limit: 30 };
+
+  pane.innerHTML = `
+    <div class="toolbar">
+      <div class="sec" style="margin-top:0;">
+        <span>集計</span>
+        <div class="chips" data-el="kinds"></div>
+      </div>
+      <div class="sec">
+        <span>グループ</span>
+        <div class="chips" data-el="groups"></div>
+      </div>
+    </div>
+    <p class="count" data-el="count"></p>
+    <div class="rows" data-el="rows"></div>
+    <button class="btn sub sm more hidden" data-el="more">さらに表示</button>`;
+
+  const el = n => pane.querySelector(`[data-el="${n}"]`);
+  const rowsEl = el("rows"), countEl = el("count"), moreEl = el("more");
+
+  function render(){
+    const r = RANKINGS.find(x => x.id === state.kind);
+    const list = computeRanking(state.kind, [...state.groups]);
+    const max = Math.max(1, ...list.map(e => e.n));
+    const ordered = r.src === "year";      // 年別は順位を出さない
+
+    countEl.textContent = list.length ? `${list.length}件` : "";
+    const shown = list.slice(0, state.limit);
+    rowsEl.innerHTML = shown.length ? shown.map((e, i) => `
+      <div class="row" data-i="${i}">
+        <button type="button" style="padding:0;">
+          <span class="rk">
+            <span class="no${i < 3 && !ordered ? " top" : ""}">${ordered ? "" : i + 1}</span>
+            <span class="body">
+              <span class="nm">${esc(e.label)}</span>
+              ${e.sub ? `<span class="sub">${esc(e.sub)}</span>` : ""}
+              <span class="bar"><i style="width:${Math.round(e.n / max * 100)}%"></i></span>
+            </span>
+            <span class="cnt">${esc(e.value)}</span>
+          </span>
+        </button>
+      </div>`).join("") : `<p class="empty">該当がありません</p>`;
+    rowsEl._list = shown;
+    moreEl.classList.toggle("hidden", list.length <= state.limit);
+    moreEl.textContent = `さらに表示（残り ${Math.max(0, list.length - state.limit)}件）`;
+  }
+
+  const kc = el("kinds");
+  rankIds.forEach(id => {
+    const r = RANKINGS.find(x => x.id === id);
+    const b = document.createElement("button");
+    b.className = "chip sm"; b.textContent = r.label;
+    b.setAttribute("aria-pressed", state.kind === id);
+    b.onclick = () => {
+      state.kind = id; state.limit = 30;
+      [...kc.children].forEach(x => x.setAttribute("aria-pressed", x === b));
+      render();
+    };
+    kc.appendChild(b);
+  });
+
+  const gc = el("groups");
+  D.groups.forEach(g => {
+    const col = GROUP_COLORS[g];
+    const b = document.createElement("button");
+    b.className = "chip sm"; b.textContent = g; b.dataset.color = "1";
+    b.style.setProperty("--c", col.c); b.style.setProperty("--cf", col.f);
+    b.setAttribute("aria-pressed", "true");
+    b.onclick = () => {
+      state.groups.has(g) ? state.groups.delete(g) : state.groups.add(g);
+      b.setAttribute("aria-pressed", state.groups.has(g));
+      state.limit = 30; render();
+    };
+    gc.appendChild(b);
+  });
+
+  moreEl.onclick = () => { state.limit += 30; render(); };
+  rowsEl.addEventListener("click", ev => {
+    const row = ev.target.closest(".row"); if(!row) return;
+    toggleRow(row, () => {
+      const e2 = rowsEl._list[+row.dataset.i];
+      return `<div class="rkitems">` +
+        e2.items.map(t => {
+          const p = String(t).split("／");
+          return `<div>${esc(p[0])}${p.length > 1
+            ? `<span class="cd">　${esc(p.slice(1).join("／"))}</span>` : ""}</div>`;
+        }).join("") +
+        (e2.n > e2.items.length ? `<div class="cd">ほか ${e2.n - e2.items.length}件</div>` : "") +
+        `</div>`;
+    });
+  });
+
+  render();
+}
+
+/* ================= 作曲・編曲(制作者の一覧) ================= */
+const ROLES = [
+  {key:"composer",      label:"作曲"},
+  {key:"arranger",      label:"編曲"},
+  {key:"lyricist",      label:"作詞"},
+  {key:"choreographer", label:"振付"},
+  {key:"director",      label:"MV監督"},
+];
+const crState = { q:"", roles:new Set(["composer","arranger"]),
+                  groups:new Set(D.groups), limit:60 };
+let crInit = false;
+
+/* 制作者ごとに、担当した役割と曲をまとめる */
+function buildCreators(){
+  const map = new Map();
+  for(const s of D.songs){
+    if(!crState.groups.has(s.g)) continue;
+    for(const role of ROLES){
+      if(!crState.roles.has(role.key)) continue;
+      for(const raw of splitPeople(s[role.key])){
+        const k = baseKey(raw);
+        if(!k) continue;
+        if(!map.has(k)) map.set(k, {name: cleanName(raw), roles:{}, n:0, items:[]});
+        const e = map.get(k);
+        e.roles[role.label] = (e.roles[role.label] || 0) + 1;
+        e.n += 1;
+        if(e.items.length < 80) e.items.push(`${role.label}／${bare(s.title)}／${s.g}／${s.cd}`);
+      }
+    }
+  }
+  let list = [...map.values()];
+  const q = crState.q.trim().toLowerCase();
+  if(q) list = list.filter(e => e.name.toLowerCase().includes(q));
+  return list.sort((a,b) => b.n - a.n || a.name.localeCompare(b.name, "ja"));
+}
+
+function renderCreators(){
+  const list = buildCreators();
+  $("crCount").textContent = `${list.length}人`;
+  const shown = list.slice(0, crState.limit);
+  $("crRows").innerHTML = shown.length ? shown.map((e, i) => {
+    const roles = Object.entries(e.roles)
+      .map(([r, n]) => `<span class="ttag">${esc(r)} ${n}</span>`).join("");
+    return `
+      <div class="row" data-i="${i}">
+        <button type="button">
+          <span class="gbar" style="background:var(--line)"></span>
+          <span class="body">
+            <span class="t1">${esc(e.name)}${roles}</span>
+            <span class="t2">計 ${e.n}曲</span>
+          </span>
+          <span class="chev">▶</span>
+        </button>
+      </div>`;
+  }).join("") : `<p class="empty">該当がありません</p>`;
+  $("crRows")._list = shown;
+  $("crMore").classList.toggle("hidden", list.length <= crState.limit);
+  $("crMore").textContent = `さらに表示（残り ${Math.max(0, list.length - crState.limit)}人）`;
+}
+
+function initCreators(){
+  crInit = true;
+  const rc = $("crRoles");
+  ROLES.forEach(r => {
+    const b = document.createElement("button");
+    b.className = "chip sm"; b.textContent = r.label;
+    b.setAttribute("aria-pressed", crState.roles.has(r.key));
+    b.onclick = () => {
+      crState.roles.has(r.key) ? crState.roles.delete(r.key) : crState.roles.add(r.key);
+      b.setAttribute("aria-pressed", crState.roles.has(r.key));
+      crState.limit = 60; renderCreators();
+    };
+    rc.appendChild(b);
+  });
+  const gc = $("crGroups");
+  D.groups.forEach(g => {
+    const col = GROUP_COLORS[g];
+    const b = document.createElement("button");
+    b.className = "chip sm"; b.textContent = g; b.dataset.color = "1";
+    b.style.setProperty("--c", col.c); b.style.setProperty("--cf", col.f);
+    b.setAttribute("aria-pressed", "true");
+    b.onclick = () => {
+      crState.groups.has(g) ? crState.groups.delete(g) : crState.groups.add(g);
+      b.setAttribute("aria-pressed", crState.groups.has(g));
+      crState.limit = 60; renderCreators();
+    };
+    gc.appendChild(b);
+  });
+  $("crSearch").oninput = e => { crState.q = e.target.value; crState.limit = 60; renderCreators(); };
+  $("crMore").onclick = () => { crState.limit += 60; renderCreators(); };
+  $("crRows").addEventListener("click", e => {
+    const row = e.target.closest(".row"); if(!row) return;
+    toggleRow(row, () => {
+      const e2 = $("crRows")._list[+row.dataset.i];
+      return `<div class="rkitems">` +
+        e2.items.map(t => {
+          const p = String(t).split("／");
+          return `<div>${esc(p[1])}<span class="cd">　${esc(p[0])}／${esc(p.slice(2).join("／"))}</span></div>`;
+        }).join("") +
+        (e2.n > e2.items.length ? `<div class="cd">ほか ${e2.n - e2.items.length}曲</div>` : "") +
+        `</div>`;
+    });
+  });
+  renderCreators();
+}
+
+/* ================= 一覧 / ランキング の切替 ================= */
+const TAB_MODES = {};   // tab名 -> "list" | "rank"
+
+function initModebars(){
+  document.querySelectorAll(".modebar").forEach(bar => {
+    const tab = bar.dataset.tab;
+    TAB_MODES[tab] = "list";
+    [["list","一覧"],["rank","ランキング"]].forEach(([mode, label]) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.setAttribute("aria-pressed", mode === "list");
+      b.onclick = () => {
+        TAB_MODES[tab] = mode;
+        [...bar.children].forEach(x => x.setAttribute("aria-pressed", x === b));
+        showPane(tab);
+      };
+      bar.appendChild(b);
+    });
+  });
+}
+function showPane(tab){
+  const mode = TAB_MODES[tab] || "list";
+  document.querySelector(`[data-pane="${tab}-list"]`).classList.toggle("hidden", mode !== "list");
+  const rankPane = document.querySelector(`[data-pane="${tab}-rank"]`);
+  rankPane.classList.toggle("hidden", mode !== "rank");
+  if(mode === "rank" && !rankPane.dataset.ready){
+    rankPane.dataset.ready = "1";
+    buildRankPane(rankPane, RANK_SETS[tab]);
+  }
+  window.scrollTo({top:0});
+}
+
 function toggleRow(row, html){
   const open = row.classList.toggle("open");
   const cur = row.querySelector(".detail");
@@ -1534,12 +1959,8 @@ function localReports(){
 function saveLocal(list){
   try { localStorage.setItem(REP_KEY, JSON.stringify(list)); } catch(e){}
 }
-function updateDot(){
-  const n = localReports().length;
-  const dot = $("repDot");
-  dot.textContent = n;
-  dot.classList.toggle("hidden", n===0);
-}
+/* 報告は画面に出さず、送信だけする。端末内には未送信分の控えとして残す */
+function updateDot(){}
 function toast(msg){
   const t = document.createElement("div");
   t.className = "toast"; t.textContent = msg;
@@ -1614,22 +2035,9 @@ function sendReport(q, kind, comment){
 }
 $("qReport").onclick = openReport;
 
-function renderReports(){
-  const list = localReports().slice().reverse();
-  $("repCount").textContent = list.length ? `${list.length}件の報告` : "";
-  $("repRows").innerHTML = list.length
-    ? list.map(r => `
-      <div class="rep">
-        <div class="meta">${new Date(r.at).toLocaleString("ja-JP")}　${esc(r.group)}／${esc(r.tag)}</div>
-        <div><span class="kind">${esc(r.kind)}</span><span class="q">${esc(r.question)}</span></div>
-        <div class="meta" style="margin-top:5px;">選択肢: ${esc(r.choices.join(" / "))}　→ アプリの正解: ${esc(r.answer)}</div>
-        ${r.comment ? `<div class="cmt">${esc(r.comment)}</div>` : ""}
-      </div>`).join("")
-    : `<p class="empty">まだ報告はありません</p>`;
-  $("repCopy").classList.toggle("hidden", !list.length);
-  $("repClear").classList.toggle("hidden", !list.length);
-}
-$("repCopy").onclick = () => {
+/* 溜まった報告をまとめて取り出す。開発者用なので画面には出さず、
+   ブラウザのコンソールで __reports() と打つと使える。 */
+window.__reports = function(){
   const list = localReports();
   const text = list.map((r,i) =>
     `【${i+1}】${r.kind}\n問題: ${r.question}\n選択肢: ${r.choices.join(" / ")}\n` +
@@ -1637,23 +2045,15 @@ $("repCopy").onclick = () => {
     (r.comment ? `補足: ${r.comment}\n` : "") +
     (r.src ? `元データ: ${JSON.stringify(r.src)}\n` : "") + `日時: ${r.at}`
   ).join("\n\n----------\n\n");
-  navigator.clipboard.writeText(text)
-    .then(()=>toast("コピーしました"))
-    .catch(()=>{
-      const ta=document.createElement("textarea");
-      ta.value=text; document.body.appendChild(ta); ta.select();
-      document.execCommand("copy"); ta.remove(); toast("コピーしました");
-    });
-};
-$("repClear").onclick = () => {
-  if(!confirm("報告をすべて削除します。よろしいですか？")) return;
-  saveLocal([]); updateDot(); renderReports(); toast("削除しました");
+  console.log(text || "報告はありません");
+  return list;
 };
 
 /* ================= 起動 ================= */
 window.__QUIZ = { buildQuiz, buildContext, GENERATORS, solo, usable, notInvolved, colorSwatches };
 
 renderSetup();
+initModebars();
 updateDot();
 $("dataNote").innerHTML =
   `収録データ: 楽曲 ${D.songs.length}件 ／ メンバー ${D.members.length}名<br>` +
@@ -1670,7 +2070,7 @@ const standalone = window.navigator.standalone === true ||
                    window.matchMedia("(display-mode: standalone)").matches;
 if(isIOS && !standalone){
   $("dataNote").insertAdjacentHTML("afterbegin",
-    `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;
+    `<div style="background:#fff;border:1px solid var(--line);border-radius:8px;
                  padding:11px 13px;margin-bottom:12px;color:var(--navy-soft);
                  font-size:12.5px;line-height:1.7;text-align:left;">
        <b>ホーム画面に追加すると、アプリのように使えます</b><br>
