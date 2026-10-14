@@ -4,10 +4,11 @@
           同時に裏で最新版を取りに行き、次に開いたときに新しい内容へ入れ替える。
   ※ https か localhost で開いたときだけ有効(ブラウザの仕様)。
 */
-const CACHE = "sakamichi-quiz-v2";
+const CACHE = "sakamichi-quiz-v3";
 const ASSETS = [
   "./",
   "./index.html",
+  "./privacy.html",
   "./quiz_data.js",
   "./manifest.webmanifest",
   "./icons/icon-180.png",
