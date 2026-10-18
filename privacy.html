@@ -4,165 +4,111 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>プライバシーポリシー｜坂道 × イコノイジョイ DB</title>
-<meta name="theme-color" content="#26314f">
+<meta name="theme-color" content="#3a3a3a">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <style>
-  /* index.html と同じ配色・字詰めをそのまま使う */
-  :root{
-    --navy:#232b3d;
-    --navy-soft:#4a5468;
-    --pink:#e7c3cb;
-    --pink-deep:#a8556a;
-    --bg:#f5f4f2;
-    --card:#fff;
-    --line:#e2ded9;
-    --muted:#8b8780;
-    --radius:10px;
-  }
+  /* サク写のプライバシーポリシー（Google サイト）と同じ、白地に文章だけのつくり */
   *{box-sizing:border-box;}
   body{
-    margin:0; background:var(--bg); color:var(--navy);
+    margin:0; background:#fff; color:#212121;
     font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Meiryo",system-ui,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
+
+  /* 上の帯: 濃いグレーに斜めの面を重ねる */
   header{
-    background:var(--navy);
-    border-bottom:3px solid var(--pink-deep);
     color:#fff;
-    padding:calc(22px + env(safe-area-inset-top, 0px)) 16px 16px;
+    background:
+      linear-gradient(115deg, rgba(255,255,255,.05) 0 38%, transparent 38%),
+      linear-gradient(245deg, rgba(255,255,255,.04) 0 30%, transparent 30%),
+      linear-gradient(160deg, rgba(0,0,0,.18) 0 55%, transparent 55%),
+      #4a4a4a;
+    padding:calc(18px + env(safe-area-inset-top, 0px)) 20px 56px;
   }
-  header .inner{max-width:680px; margin:0 auto;}
-  header h1{margin:0; font-size:18px; letter-spacing:.04em;}
-  header p{margin:5px 0 0; font-size:12px; opacity:.78;}
-  header a{
-    display:inline-block; margin-top:13px; color:#fff; opacity:.72;
-    font-size:12px; font-weight:700; text-decoration:none;
-    border-bottom:1.5px solid var(--pink); padding-bottom:2px;
+  header .site{
+    display:inline-block; color:#fff; text-decoration:none;
+    font-size:15px; letter-spacing:.02em;
   }
-  header a:hover{opacity:1;}
+  header h1{
+    margin:42px 0 0; text-align:center;
+    font-size:clamp(40px, 11vw, 64px); font-weight:300; line-height:1.15;
+    letter-spacing:.02em;
+  }
 
-  .wrap{
-    max-width:680px; margin:0 auto;
-    padding:30px 16px calc(60px + env(safe-area-inset-bottom, 0px));
+  main{
+    max-width:760px; margin:0 auto;
+    padding:36px 20px calc(56px + env(safe-area-inset-bottom, 0px));
+    font-size:15px; line-height:1.7;
   }
-  .card{
-    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-    padding:18px; margin-bottom:16px;
-  }
-  .card h2{
-    margin:0 0 12px; font-size:13px; letter-spacing:.08em;
-    color:var(--muted); font-weight:700;
-  }
-  .card p{margin:0 0 11px; font-size:13.5px; line-height:1.85; color:var(--navy-soft);}
-  .card p:last-child{margin-bottom:0;}
-  .card b{color:var(--navy);}
-  .card ul{margin:0 0 11px; padding-left:1.25em;}
-  .card li{font-size:13.5px; line-height:1.85; color:var(--navy-soft); margin-bottom:4px;}
-  .card a{color:var(--pink-deep); word-break:break-all;}
-
-  .meta{
-    font-size:12px; color:var(--muted); text-align:right;
-    line-height:1.9; padding-top:2px;
-  }
-  footer{
-    text-align:center; font-size:11.5px; color:var(--muted);
-    padding:6px 0 0; line-height:1.7;
-  }
-  footer a{color:var(--muted);}
+  h2{margin:40px 0 10px; font-size:15px; font-weight:400;}
+  p{margin:0 0 12px;}
+  ul{list-style:none; margin:0 0 12px; padding:0;}
+  li::before{content:"・";}
+  a{color:#212121; word-break:break-all;}
+  .dates{margin-top:44px;}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="inner">
-    <h1>プライバシーポリシー</h1>
-    <p>坂道 × イコノイジョイ DB</p>
-    <a href="./">← サイトに戻る</a>
-  </div>
+  <a class="site" href="./">坂道 × イコノイジョイ DB</a>
+  <h1>プライバシー<br>ポリシー</h1>
 </header>
 
-<div class="wrap">
+<main>
 
-  <div class="card">
-    <h2>運営者</h2>
-    <p><b>H-MARUFOY</b>（エイチマルフォイ）</p>
-  </div>
+  <p>本ポリシーは、H-MARUFOY（以下「運営者」）が運営するウェブサイト「坂道 × イコノイジョイ DB」（以下「当サイト」）における、利用者情報の取り扱いについて定めるものです。<br>
+     なお当サイトは個人が運営する非公式のファンサイトであり、掲載する各グループおよび運営各社とは一切関係ありません。</p>
 
-  <div class="card">
-    <h2>1. 取得しない情報</h2>
-    <p>当サイトは、氏名・住所・電話番号・メールアドレスなどの<b>個人情報を取得しません</b>。
-       会員登録やログインの仕組みもありません。</p>
-    <p>ただし、お問い合わせのメールをいただいた場合は、メールアドレスとお問い合わせの内容を
-       <b>返信のためだけに</b>使用し、それ以外の目的には使用しません。</p>
-  </div>
+  <h2>1. 取得する情報</h2>
+  <p>当サイトは、ユーザー登録・ログイン機能を持たず、氏名・住所・電話番号・メールアドレスなどの個人情報を取得しません。</p>
+  <p>当サイトは、利用者の操作に応じて、次の情報をご利用のブラウザ内（ローカルストレージ）に保存します。</p>
+  <ul>
+    <li>クイズの自己ベスト記録・通算成績</li>
+    <li>問題の誤りについて送信された報告の内容</li>
+  </ul>
+  <p>加えて、当サイトでは広告配信のために Google AdSense の利用を予定しており、広告配信事業者が Cookie 等を通じて情報を取得する場合があります（第3条）。</p>
 
-  <div class="card">
-    <h2>2. 端末内に保存される情報</h2>
-    <p>当サイトは、次の情報をご利用のブラウザ内（ローカルストレージ）に保存します。</p>
-    <ul>
-      <li>クイズの自己ベスト記録（正解数・連続正解数など）</li>
-      <li>問題の誤りについて送信された報告の内容</li>
-    </ul>
-    <p>これらは<b>お使いの端末の中だけに保存され、外部のサーバーへ送信されません</b>。
-       ブラウザの閲覧データを削除すると、あわせて消去されます。
-       また、画面上の操作からも記録を削除できます。</p>
-  </div>
+  <h2>2. 情報の送信について</h2>
+  <p>第1条でブラウザ内に保存するとした情報は、お使いの端末の中だけに保存され、外部のサーバーへ送信しません。運営者を含む第三者が、これらの情報にアクセスすることはできません。</p>
+  <p>これらの情報は、ブラウザの閲覧データを削除すると消去されます。また、当サイトの画面上の操作からも削除できます。</p>
 
-  <div class="card">
-    <h2>3. Cookie と広告配信</h2>
-    <p>当サイトでは、今後 Google AdSense による広告配信を予定しています。
-       広告の配信にあたっては、次のとおり Cookie が使用されます。</p>
-    <ul>
-      <li>第三者配信事業者である Google を含む広告配信事業者が、Cookie を使用して、
-          ユーザーが当サイトや他のサイトに過去にアクセスした際の情報に基づいて広告を配信します。</li>
-      <li>Google が広告 Cookie を使用することにより、ユーザーに合わせた広告が表示されます。</li>
-    </ul>
-    <p>パーソナライズ広告は
-       <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google の広告設定</a>
-       から無効にできます。
-       また
-       <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">aboutads.info</a>
-       では、第三者配信事業者の Cookie を無効にできます。</p>
-    <p>Google による情報の取り扱いについては、
-       <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">Google のサービスを使用するサイトやアプリから収集した情報の Google による使用</a>
-       をご覧ください。</p>
-  </div>
+  <h2>3. 広告配信について</h2>
+  <p>当サイトでは、第三者配信の広告サービス Google AdSense の利用を予定しています。</p>
+  <p>Google などの第三者配信事業者は、Cookie を使用して、利用者が当サイトや他のウェブサイトに過去にアクセスした際の情報に基づいて広告を配信します。Google が広告 Cookie を使用することにより、利用者に適した広告が表示されます。</p>
+  <p>パーソナライズ広告は、<a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google の広告設定</a>で無効にできます。また、<a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">www.aboutads.info</a> にアクセスすると、第三者配信事業者の Cookie を無効にできます。</p>
+  <p>Google 社における情報の取り扱いについては、以下をご参照ください。</p>
+  <ul>
+    <li>Google のプライバシーポリシー：<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">https://policies.google.com/privacy</a></li>
+    <li>Google が広告で情報を使用する方法：<a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">https://policies.google.com/technologies/partner-sites</a></li>
+  </ul>
 
-  <div class="card">
-    <h2>4. アクセス解析</h2>
-    <p>現在、当サイトではアクセス解析ツールを利用していません。
-       導入する場合は、本ポリシーを改定してお知らせします。</p>
-  </div>
+  <h2>4. アクセス解析について</h2>
+  <p>当サイトは、現在アクセス解析ツールを利用していません。導入する場合は、本ポリシーを改定してお知らせします。</p>
 
-  <div class="card">
-    <h2>5. 免責事項</h2>
-    <p>当サイトは<b>非公式</b>のファンサイトです。
-       掲載する各グループおよび関係各社とは一切関係ありません。</p>
-    <p>収録しているデータは<b>AI が収集したもの</b>であり、誤りや欠落が含まれる場合があります。
-       内容の正確性・完全性を保証するものではありません。</p>
-    <p>当サイトの利用により生じたいかなる損害についても、運営者は責任を負いません。</p>
-  </div>
+  <h2>5. 第三者提供について</h2>
+  <p>運営者は、お問い合わせでいただいた情報を第三者へ提供・販売することはありません。広告配信に関する情報の取り扱いは、第3条に記載のとおりです。</p>
 
-  <div class="card">
-    <h2>6. 著作権について</h2>
-    <p>グループ名・楽曲名・メンバー名その他の名称に関する権利は、
-       それぞれの権利者に帰属します。
-       当サイトは、発売日やクレジットなどの事実情報を整理して掲載しているものです。</p>
-    <p>権利者の方からお申し出があった場合は、速やかに対応いたします。</p>
-  </div>
+  <h2>6. 免責事項</h2>
+  <p>当サイトに収録しているデータは AI が収集したものであり、誤りや欠落が含まれる場合があります。内容の正確性・完全性を保証するものではありません。</p>
+  <p>当サイトの利用により生じたいかなる損害についても、運営者は責任を負いません。</p>
 
-  <div class="card">
-    <h2>7. お問い合わせ</h2>
-    <p>当サイトに関するお問い合わせ、データの誤りのご指摘、権利者の方からのお申し出は、
-       次のメールアドレスまでお送りください。</p>
-    <p><a href="mailto:support@h-marufoy.com">support@h-marufoy.com</a></p>
-  </div>
+  <h2>7. 著作権について</h2>
+  <p>グループ名・楽曲名・メンバー名その他の名称に関する権利は、それぞれの権利者に帰属します。当サイトは、発売日やクレジットなどの事実情報を整理して掲載しているものです。</p>
+  <p>権利者の方からお申し出があった場合は、速やかに対応いたします。</p>
 
-  <p class="meta">制定日　2026年10月6日<br>改定日　2026年10月19日</p>
+  <h2>8. 本ポリシーの変更</h2>
+  <p>本ポリシーの内容は、必要に応じて改定することがあります。重要な変更がある場合は、本ページ上でお知らせします。</p>
 
-  <footer><a href="./">坂道 × イコノイジョイ DB</a></footer>
+  <h2>9. お問い合わせ</h2>
+  <p>当サイトおよび本ポリシーに関するお問い合わせ、データの誤りのご指摘、権利者の方からのお申し出は、下記のメールアドレスまでご連絡ください。いただいたメールアドレスとお問い合わせの内容は、返信のためだけに使用します。</p>
+  <p>お問い合わせ先：<a href="mailto:support@h-marufoy.com">support@h-marufoy.com</a></p>
 
-</div>
+  <p class="dates">運営者：H-MARUFOY<br>
+     制定日：2026年10月06日<br>
+     最終改訂日：2026年10月19日</p>
+
+</main>
 
 </body>
 </html>
