@@ -1525,6 +1525,50 @@ function memMatches(m){
     .join(" ").toLowerCase();
   return q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
 }
+/* ---- 同じ人が複数グループに在籍しているときの扱い ----
+   Excelはグループごとにシートが分かれているので、欅坂46→櫻坂46のように移った人は
+   2行ある。一覧では1人1件にして、絞り込んだ範囲のなかで
+   「最後に所属していたグループ」の行だけを残す。
+   (全グループなら櫻坂46の行、欅坂46だけで絞ればそのまま欅坂46の行) */
+
+/* 誕生日の「09/07【要確認：…】」のような注記を外す */
+const normBirth = v => String(v || "").replace(/【[^】]*】/g, "").trim();
+
+/* 在籍の終わりが遅いほうを「最後に所属していたグループ」とみなす。
+   「2020/10/16～」のように終わりが空なら在籍中なので最大。 */
+function lastRank(m){
+  const t = String(m.tenure || "");
+  const e = t.match(/～\s*(\d{4})\/(\d{1,2})(?:\/(\d{1,2}))?/);
+  if(e) return `${e[1]}-${String(e[2]).padStart(2,"0")}-${String(e[3] || "99").padStart(2,"0")}`;
+  return /～/.test(t) ? "9999-99-99" : "0000-00-00";   // 在籍中 / 在籍期間が不明
+}
+
+function memCollapse(list){
+  const byName = new Map();
+  list.forEach(m => {
+    if(!byName.has(m.name)) byName.set(m.name, []);
+    byName.get(m.name).push(m);
+  });
+  const out = [];
+  byName.forEach(rows => {
+    // 誕生日は注記を外して見る。はっきりした誕生日が2つ以上あれば同名の別人なので分ける
+    const firm = new Set(rows.filter(m => !BAD.test(m.birthday))
+                             .map(m => normBirth(m.birthday)));
+    const buckets = new Map();
+    rows.forEach(m => {
+      const k = firm.size > 1 ? normBirth(m.birthday) : "";
+      if(!buckets.has(k)) buckets.set(k, []);
+      buckets.get(k).push(m);
+    });
+    buckets.forEach(rs => {
+      rs.sort((a, b) => lastRank(b).localeCompare(lastRank(a))
+                     || (D.groups.indexOf(b.g) - D.groups.indexOf(a.g)));
+      out.push(rs[0]);
+    });
+  });
+  return out;
+}
+
 function memSorted(list){
   const a = list.slice(), c = memState.sort;
   // Excelはグループごとにシートが分かれ、各シート内は 期→五十音 の並び。
@@ -1567,7 +1611,7 @@ function memDetailHTML(m){
   </dl></div>`;
 }
 function renderMembers(){
-  const list = memSorted(D.members.filter(memMatches));
+  const list = memSorted(memCollapse(D.members.filter(memMatches)));
   $("memCount").textContent = `${list.length}名`;
   const shown = list.slice(0, memState.limit);
   $("memRows").innerHTML = shown.length
@@ -2076,7 +2120,8 @@ window.__reports = function(){
 };
 
 /* ================= 起動 ================= */
-window.__QUIZ = { buildQuiz, buildContext, GENERATORS, solo, usable, notInvolved, colorSwatches };
+window.__QUIZ = { buildQuiz, buildContext, GENERATORS, solo, usable, notInvolved, colorSwatches,
+                  memCollapse, lastRank, normBirth, memState, renderMembers };
 
 renderSetup();
 initModebars();
