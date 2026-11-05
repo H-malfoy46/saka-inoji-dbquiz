@@ -2131,7 +2131,7 @@ $("dataNote").innerHTML =
     `このサイトは<b>非公式</b>です。各グループおよび関係各社とは一切関係ありません。<br>` +
     `収録データは<b>AIが収集したもの</b>で、誤りが含まれる場合があります。` +
   `</div>` +
-  `収録データ: 楽曲 ${D.songs.length}件 ／ メンバー ${D.members.length}名<br>` +
+  `収録データ: 楽曲 ${D.songs.length}件 ／ メンバー ${memCollapse(D.members).length}名<br>` +
   `<a href="privacy.html">プライバシーポリシー</a>`;
 
 /* オフラインでも遊べるようにする(https / localhost のときだけ有効) */
